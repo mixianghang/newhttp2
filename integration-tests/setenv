@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-export CGO_CFLAGS="-I/home/xianghang/workspace/nghttp2/lib/includes -I/home/xianghang/workspace/nghttp2/lib/includes"
-export CGO_LDFLAGS="-L/home/xianghang/workspace/nghttp2/lib/.libs"
-export LD_LIBRARY_PATH="/home/xianghang/workspace/nghttp2/lib/.libs"
+export CGO_CFLAGS="-I/home/xianghang/workspace/newhttp2/lib/includes -I/home/xianghang/workspace/newhttp2/lib/includes"
+export CGO_LDFLAGS="-L/home/xianghang/workspace/newhttp2/lib/.libs"
+export LD_LIBRARY_PATH="/home/xianghang/workspace/newhttp2/lib/.libs"
 "$@"
