@@ -8,6 +8,7 @@
 *.o
 .deps/
 .libs/
+tags
 INSTALL
 Makefile
 Makefile.in
