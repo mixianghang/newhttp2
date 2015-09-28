@@ -4,7 +4,7 @@
 # autotools
 *.la
 *.lo
-*.m4
+#*.m4
 *.o
 .deps/
 .libs/
