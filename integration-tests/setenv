@@ -1,0 +1,6 @@
+#!/bin/sh -e
+
+export CGO_CFLAGS="-I/Users/xianghangmi/Workspace/github/nghttp2/lib/includes -I/Users/xianghangmi/Workspace/github/nghttp2/lib/includes"
+export CGO_LDFLAGS="-L/Users/xianghangmi/Workspace/github/nghttp2/lib/.libs"
+export LD_LIBRARY_PATH="/Users/xianghangmi/Workspace/github/nghttp2/lib/.libs"
+"$@"

@@ -1,0 +1,164 @@
+FILES
+-----
+
+*/etc/nghttpx/nghttpx.conf*
+  The default configuration file path nghttpx searches at startup.
+  The configuration file path can be changed using :option:`--conf`
+  option.
+
+  Those lines which are staring ``#`` are treated as comment.
+
+  The option name in the configuration file is the long command-line
+  option name with leading ``--`` stripped (e.g., ``frontend``).  Put
+  ``=`` between option name and value.  Don't put extra leading or
+  trailing spaces.
+
+  The options which do not take argument in the command-line *take*
+  argument in the configuration file.  Specify ``yes`` as an argument
+  (e.g., ``http2-proxy=yes``).  If other string is given, it is
+  ignored.
+
+  To specify private key and certificate file which are given as
+  positional arguments in command-line, use ``private-key-file`` and
+  ``certificate-file``.
+
+  :option:`--conf` option cannot be used in the configuration file and
+  will be ignored if specified.
+
+SIGNALS
+-------
+
+SIGQUIT
+  Shutdown gracefully.  First accept pending connections and stop
+  accepting connection.  After all connections are handled, nghttpx
+  exits.
+
+SIGUSR1
+  Reopen log files.
+
+SIGUSR2
+  Fork and execute nghttpx.  It will execute the binary in the same
+  path with same command-line arguments and environment variables.
+  After new process comes up, sending SIGQUIT to the original process
+  to perform hot swapping.
+
+SERVER PUSH
+-----------
+
+nghttpx supports HTTP/2 server push in default mode.  nghttpx looks
+for Link header field (`RFC 5988
+<http://tools.ietf.org/html/rfc5988>`_) in response headers from
+backend server and extracts URI-reference with parameter
+``rel=preload`` (see `preload
+<http://w3c.github.io/preload/#interoperability-with-http-link-header>`_)
+and pushes those URIs to the frontend client. Here is a sample Link
+header field to initiate server push:
+
+.. code-block:: http
+
+  Link: </fonts/font.woff>; rel=preload
+  Link: </css/theme.css>; rel=preload
+
+Currently, the following restrictions are applied for server push:
+
+1. URI-reference must not contain authority.  If it exists, it is not
+   pushed.  ``/fonts/font.woff`` and ``css/theme.css`` are eligible to
+   be pushed.  ``https://example.org/fonts/font.woff`` and
+   ``//example.org/css/theme.css`` are not.
+
+2. The associated stream must have method "GET" or "POST".  The
+   associated stream's status code must be 200.
+
+These limitations may be loosened in the future release.
+
+UNIX DOMAIN SOCKET
+------------------
+
+nghttpx supports UNIX domain socket with a filename for both frontend
+and backend connections.
+
+Please note that current nghttpx implementation does not delete a
+socket with a filename.  And on start up, if nghttpx detects that the
+specified socket already exists in the file system, nghttpx first
+deletes it.  However, if SIGUSR2 is used to execute new binary and
+both old and new configurations use same filename, new binary does not
+delete the socket and continues to use it.
+
+OCSP STAPLING
+-------------
+
+OCSP query is done using external Python script
+``fetch-ocsp-response``, which has been originally developed in Perl
+as part of h2o project (https://github.com/h2o/h2o), and was
+translated into Python.
+
+The script file is usually installed under
+``$(prefix)/share/nghttp2/`` directory.  The actual path to script can
+be customized using :option:`--fetch-ocsp-response-file` option.
+
+If OCSP query is failed, previous OCSP response, if any, is continued
+to be used.
+
+TLS SESSION RESUMPTION
+----------------------
+
+nghttpx supports TLS session resumption through both session ID and
+session ticket.
+
+SESSION ID RESUMPTION
+~~~~~~~~~~~~~~~~~~~~~
+
+By default, session ID is shared by all worker threads.
+
+If :option:`--tls-session-cache-memcached` is given, nghttpx will
+insert serialized session data to memcached with
+``nghttpx:tls-session-cache:`` + lowercased hex string of session ID
+as a memcached entry key, with expiry time 12 hours.  Session timeout
+is set to 12 hours.
+
+TLS SESSION TICKET RESUMPTION
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, session ticket is shared by all worker threads.  The
+automatic key rotation is also enabled by default.  Every an hour, new
+encryption key is generated, and previous encryption key becomes
+decryption only key.  We set session timeout to 12 hours, and thus we
+keep at most 12 keys.
+
+If :option:`--tls-ticket-key-memcached` is given, encryption keys are
+retrieved from memcached.  nghttpx just reads keys from memcached; one
+has to deploy key generator program to update keys frequently (e.g.,
+every 1 hour).  The example key generator tlsticketupdate.go is
+available under contrib directory in nghttp2 archive.  The memcached
+entry key is ``nghttpx:tls-ticket-key``.  The data format stored in
+memcached is the binary format described below::
+
+    +--------------+-------+----------------+
+    | VERSION (4)  |LEN (2)|KEY(48 or 80) ...
+    +--------------+-------+----------------+
+                   ^                        |
+		   |                        |
+		   +------------------------+
+                   (LEN, KEY) pair can be repeated
+
+All numbers in the above figure is bytes.  All integer fields are
+network byte order.
+
+First 4 bytes integer VERSION field, which must be 1.  The 2 bytes
+integer LEN field gives the length of following KEY field, which
+contains key.  If :option:`--tls-ticket-key-cipher`\=aes-128-cbc is
+used, LEN must be 48.  If
+:option:`--tls-ticket-key-cipher`\=aes-256-cbc is used, LEN must be
+80.  LEN and KEY pair can be repeated multiple times to store multiple
+keys.  The key appeared first is used as encryption key.  All the
+remaining keys are used as decryption only.
+
+If :option:`--tls-ticket-key-file` is given, encryption key is read
+from the given file.  In this case, nghttpx does not rotate key
+automatically.  To rotate key, one has to restart nghttpx (see
+SIGNALS).
+
+SEE ALSO
+--------
+
+:manpage:`nghttp(1)`, :manpage:`nghttpd(1)`, :manpage:`h2load(1)`
