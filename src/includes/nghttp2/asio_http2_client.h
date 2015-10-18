@@ -150,6 +150,9 @@ public:
   //is connected
   int isConnected() const;
 
+  //get the num of streams
+  int getStreamNum() const;
+
   // Returns underlying io_service object.
   boost::asio::io_service &io_service() const;
 

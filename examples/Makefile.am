@@ -58,7 +58,7 @@ endif # ENABLE_TINY_NGHTTPD
 
 if ENABLE_ASIO_LIB
 
-noinst_PROGRAMS += asio-sv asio-sv2 asio-cl asio-cl2
+noinst_PROGRAMS += asio-sv asio-sv2 asio-cl asio-cl2 asio-cl-1 asio-cl-2
 
 # AM_CPPFLAGS must be placed first, so that header file (e.g.,
 # nghttp2/nghttp2.h) in this package is used rather than installed
@@ -85,6 +85,14 @@ asio_sv2_LDADD = ${ASIOLDADD}
 asio_cl_SOURCES = asio-cl.cc
 asio_cl_CPPFLAGS = ${ASIOCPPFLAGS}
 asio_cl_LDADD = ${ASIOLDADD}
+
+asio_cl_1_SOURCES = asio-cl.h asio-cl-1.cc
+asio_cl_1_CPPFLAGS = ${ASIOCPPFLAGS}
+asio_cl_1_LDADD = ${ASIOLDADD}
+
+asio_cl_2_SOURCES = asio-cl.h asio-cl-2.cc
+asio_cl_2_CPPFLAGS = ${ASIOCPPFLAGS}
+asio_cl_2_LDADD = ${ASIOLDADD}
 
 asio_cl2_SOURCES = asio-cl2.cc
 asio_cl2_CPPFLAGS = ${ASIOCPPFLAGS}

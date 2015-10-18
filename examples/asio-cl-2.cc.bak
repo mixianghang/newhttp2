@@ -1,0 +1,80 @@
+/***********************************************
+*
+*Filename: asio-cl-2.cc
+*
+*@author: Xianghang Mi
+*@email: mixianghang@outlook.com
+*@description: ---
+*Create: 2015-09-28 14:48:25
+*Last Modified: 2015-09-28 14:48:25
+************************************************/
+
+#include "asio-cl.h"
+
+int main(int argc, char *argv[]) {
+  try {
+    if (argc < 4) {
+      std::cerr << "Usage: asio-cl URI getfile1 getfile2 logfile1 logfile2" << std::endl;
+      return 1;
+    }
+    boost::system::error_code ec;
+    boost::asio::io_service io_service1;
+    boost::asio::io_service io_service2;
+
+	timeinfo get1Info, get2Info;
+    std::string uri = argv[1];
+	std::string get1 = uri + "/" + argv[2];
+	std::string get2 = uri + "/" + argv[3];
+    std::string scheme, host, service;
+	sprintf(get1Info.logFile, "%s",argv[4]);
+	sprintf(get2Info.logFile, "%s",argv[5]);
+
+    if (host_service_from_uri(ec, scheme, host, service, uri)) {
+      std::cerr << "error: bad URI: " << ec.message() << std::endl;
+      return 1;
+    }
+
+    boost::asio::ssl::context tls_ctx(boost::asio::ssl::context::sslv23);
+    tls_ctx.set_default_verify_paths();
+    // disabled to make development easier...
+    // tls_ctx.set_verify_mode(boost::asio::ssl::verify_peer);
+    configure_tls_context(ec, tls_ctx);
+
+	session_manager sessionManager{};
+    auto sessId = scheme == "https" ? sessionManager.startNewSession(io_service1, tls_ctx, host, service)
+                                  : sessionManager.startNewSession(io_service1, host, service);
+    auto sessId1 = scheme == "https" ? sessionManager.startNewSession(io_service1, tls_ctx, host, service)
+                                  : sessionManager.startNewSession(io_service2, host, service);
+								  
+
+	if (sessId < 0) {
+	  std::cerr << "error: create new session error" << std::endl;
+	  return 1;
+	}
+	if (sessId1 < 0) {
+	  std::cerr << "error: create new session error" << std::endl;
+	  return 1;
+	}
+
+	auto sess = sessionManager.getSession(sessId);
+	auto sess1 = sessionManager.getSession(sessId1);
+	gettimeofday(&(get1Info.connectStart), NULL);
+	gettimeofday(&(get2Info.connectStart), NULL);
+	if (get1Info.connectStart.tv_usec % 2 == 0) {
+	  initSession(sess, sessId, uri, get1, get1Info);
+	  initSession(sess1, sessId1, uri, get2, get2Info);
+	} else {
+	  initSession(sess, sessId1, uri, get1, get1Info);
+	  initSession(sess1, sessId, uri, get2, get2Info);
+	}
+	pthread_t thread1, thread2;
+	pthread_create(&thread1,NULL,ioservice,(void *)&io_service1);
+	pthread_create(&thread1,NULL,ioservice,(void *)&io_service2);
+	pthread_join(thread1, NULL);
+	pthread_join(thread2, NULL);
+  } catch (std::exception &e) {
+    std::cerr << "exception: " << e.what() << "\n";
+  }
+
+  return 0;
+}

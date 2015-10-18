@@ -127,14 +127,15 @@ int submitRequest(session * sess, std::string  uri, int sessId) {
 	  std::cerr << std::endl;
 
 	  res.on_data([sess, uri, sessId](const uint8_t *data, std::size_t len) {
-	    //std::cerr.write(reinterpret_cast<const char *>(data), len);
+	    std::cerr.write(reinterpret_cast<const char *>(data), len);
+		std::cerr << std::endl;
 	    std::cerr << "session" << sessId << uri << "data lenght is " << len << std::endl;
 	  });
 	});
 
 // we don't need to shutdown the session when a stream starts to shutdown
 	req->on_close([sess, uri](uint32_t error_code) { //sess->shutdown(); 
-	printf("uri %s will be closed \n", uri.c_str());
+	  printf("uri %s will be closed \n", uri.c_str());
 	});
 	return 0;
 }

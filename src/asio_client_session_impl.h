@@ -92,6 +92,7 @@ public:
   void do_write();
   //is connected
   int isConnected() const;
+  int getStreamNum() const;
 
 protected:
   boost::array<uint8_t, 8_k> rb_;

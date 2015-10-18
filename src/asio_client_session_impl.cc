@@ -562,6 +562,11 @@ void session_impl::do_read() {
 int session_impl::isConnected() const {
   return isConnected_;
 }
+
+int session_impl::getStreamNum() const {
+  return streams_.size();
+}
+
 void session_impl::do_write() {
   if (writing_) {
     return;

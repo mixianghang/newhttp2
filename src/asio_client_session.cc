@@ -97,6 +97,10 @@ int session::isConnected() const {
   return impl_->isConnected();
 }
 
+int session::getStreamNum() const {
+  return impl_->getStreamNum();
+}
+
 } // namespace client
 } // namespace asio_http2
 } // nghttp2
