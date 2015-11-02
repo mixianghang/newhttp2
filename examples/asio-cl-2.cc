@@ -13,8 +13,8 @@
 
 int main(int argc, char *argv[]) {
   try {
-    if (argc < 8) {
-      std::cerr << "Usage: asio-cl-2 URI get1 get2 logfile1 logfile2 roundNum logDir" << std::endl;
+    if (argc < 10) {
+      std::cerr << "Usage: asio-cl-2 URI get1 get2 logfile1 logfile2 roundNum logDir mediumLen1 mediumLen2" << std::endl;
       return 1;
     }
     boost::system::error_code ec;
@@ -22,6 +22,8 @@ int main(int argc, char *argv[]) {
     boost::asio::io_service io_service2;
 	requestInfo reqInfo1, reqInfo2;
 	sessionInfo sessInfo1, sessInfo2;
+	reqInfo1.mediumLen = atoi(argv[8])/2;
+	reqInfo2.mediumLen = atoi(argv[9])/2;
 	memset(reqInfo1.logFile, 0, sizeof (reqInfo1.logFile));
 	memset(reqInfo2.logFile, 0, sizeof (reqInfo2.logFile));
 	sprintf(reqInfo1.logFile, "%s/two_%s_%s.csv", argv[7], argv[2], argv[4]);
@@ -90,6 +92,7 @@ int main(int argc, char *argv[]) {
 	sessInfo1.roundNum = atoi(argv[6]);
 	sessInfo1.leftRoundNum = sessInfo1.roundNum;
 	sessInfo1.requestNum = 1;
+	sessInfo1.isConcurrent = 1;
 
 	// initialize sessInfo2
 	sessInfo2.sessId = sessId2;
@@ -97,6 +100,7 @@ int main(int argc, char *argv[]) {
 	sessInfo2.roundNum = atoi(argv[6]);
 	sessInfo2.leftRoundNum = sessInfo2.roundNum;
 	sessInfo2.requestNum = 1;
+	sessInfo2.isConcurrent = 1;
 
 	// set requestList
 	sessInfo1.requestList[0] = &reqInfo1;

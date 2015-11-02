@@ -13,8 +13,8 @@
 
 int main(int argc, char *argv[]) {
   try {
-    if (argc < 8) {
-      std::cerr << "Usage: asio-cl URI get1 get2 logfile1 logfile2 roundNum logDir" << std::endl;
+    if (argc < 10) {
+      std::cerr << "Usage: asio-cl URI get1 get2 logfile1 logfile2 roundNum logDir mediumLen1 mediumLen2" << std::endl;
       return 1;
     }
     boost::system::error_code ec;
@@ -22,6 +22,8 @@ int main(int argc, char *argv[]) {
 
 	requestInfo reqInfo1, reqInfo2;
 	sessionInfo sessInfo;
+	reqInfo1.mediumLen = atoi(argv[8])/2;
+	reqInfo2.mediumLen = atoi(argv[9])/2;
 	memset(reqInfo1.logFile, 0, sizeof (reqInfo1.logFile));
 	memset(reqInfo2.logFile, 0, sizeof (reqInfo2.logFile));
 	sprintf(reqInfo1.logFile, "%s/one_%s_%s.csv", argv[7], argv[2], argv[4]);
@@ -79,8 +81,11 @@ int main(int argc, char *argv[]) {
 	sessInfo.requestList[0] = &reqInfo2;
 	sessInfo.requestList[1] = &reqInfo1;
 	sessInfo.roundNum   = atoi(argv[6]);
+	sessInfo.isConcurrent = 0;
+	sessInfo.currentRequestNum = 0;
 	sessInfo.leftRoundNum    = sessInfo.roundNum;
 	initSession(&sessInfo);
+	// start to run the session
     io_service.run();
   } catch (std::exception &e) {
     std::cerr << "exception: " << e.what() << "\n";

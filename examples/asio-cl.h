@@ -27,9 +27,11 @@ typedef struct RequestInfo {
   std::string uri;
   struct timeval requestStart;
   struct timeval responseStart;
+  struct timeval dataStart;
   struct timeval responseEnd;
   char logFile[256];
-  int  responseLen;
+  uint32_t responseLen;
+  uint32_t mediumLen;
 } requestInfo;
 
 typedef struct SessionInfo {
@@ -40,6 +42,8 @@ typedef struct SessionInfo {
   struct timeval sessionEnd;// time when session end
   requestInfo * requestList[256];
   int requestNum;// how many requests to sent  every round trip
+  int currentRequestNum;// used to record  how many requests have run in this round
+  int isConcurrent;// if multiple requests are sent at the same time
   int roundNum; // how many round trip
   int leftRoundNum;
 } sessionInfo;
@@ -80,6 +84,7 @@ int submitRequest (sessionInfo * sessInfo, requestInfo * reqInfo) {
   boost::system::error_code ec;
   session * sess = sessInfo->sess;
   int sessId = sessInfo->sessId;
+  reqInfo->responseLen = 0;
   auto req = sess->submit(ec, "GET", reqInfo->uri);
   gettimeofday(&(reqInfo->requestStart), NULL);
   if (ec) {
@@ -88,8 +93,16 @@ int submitRequest (sessionInfo * sessInfo, requestInfo * reqInfo) {
   }
   req->on_response([sessInfo,reqInfo](const response &res) {
 	gettimeofday(&(reqInfo->responseStart), NULL);
-	res.on_data([reqInfo](const uint8_t *data, std::size_t len) {
+	res.on_data([reqInfo,sessInfo](const uint8_t *data, std::size_t len) {
+	  if (reqInfo->responseLen == 0 && len > 0) {
+		gettimeofday(&(reqInfo->dataStart), NULL);
+	  }
 	  reqInfo->responseLen += len;
+	  if (reqInfo->responseLen >= reqInfo->mediumLen) {
+		if (!(sessInfo->isConcurrent) && sessInfo->currentRequestNum < sessInfo->requestNum) {
+		  submitRequest(sessInfo, sessInfo->requestList[(sessInfo->currentRequestNum)++]);
+		}
+	  }
 	});
   });
 
@@ -123,7 +136,7 @@ int submitRequest (sessionInfo * sessInfo, requestInfo * reqInfo) {
 	  FILE * fp = fopen(logFile, "a+");
 	  if (fp != NULL) {
 		//uri, dataLen, sessId, timeForConnect timeForRequest, timeForResponse, timeForRequestAndResponse
-		fprintf(fp, "%s,%d,%d,%d,%d,%d,%d\r\n", uri.c_str(), dataLen, sessId, timeForConnect, timeForRequest, timeForResponse, timeForRequestAndResponse);
+		fprintf(fp, "%s,%d,%d,%d,%d,%d,%d\r\n", uri.c_str(), dataLen, sessId, timeForConnect/1000, timeForRequest/1000, timeForResponse/1000, timeForRequestAndResponse/1000);
 		fclose(fp);
 	  } else {
 		printf("open file %s failed\n", logFile);
@@ -132,9 +145,13 @@ int submitRequest (sessionInfo * sessInfo, requestInfo * reqInfo) {
 	  printf("log file %s doesn't exist\n", logFile);
 	}
 
-	printf("timeForConnect of %s is %d useconds\n", uri.c_str(), timeForConnect);
-	printf("timeForRequestAndResponse %s is %d useconds\n", uri.c_str(), timeForRequestAndResponse);
-	printf("timeForRequestAndResponse %s is %d useconds\n", uri.c_str(), timeForResponse);
+	printf("\nstart request %s at %lu s %lu usecond\n", uri.c_str(), reqInfo->requestStart.tv_sec, reqInfo->requestStart.tv_usec);
+	printf("start response %s at %lu s %lu usecond\n", uri.c_str(), reqInfo->responseStart.tv_sec, reqInfo->responseStart.tv_usec);
+	printf("start rece data %s at %lu s %lu usecond\n", uri.c_str(), reqInfo->dataStart.tv_sec, reqInfo->dataStart.tv_usec);
+	printf("end response %s at %lu s %lu usecond\n", uri.c_str(), reqInfo->responseEnd.tv_sec, reqInfo->responseEnd.tv_usec);
+	printf("timeForConnect of %s is %d miliseconds\n", uri.c_str(), timeForConnect/1000);
+	printf("timeForRequestAndResponse %s is %d miliseconds\n", uri.c_str(), timeForRequestAndResponse/1000);
+	printf("timeForResponse %s is %d milliseconds\n", uri.c_str(), timeForResponse/1000);
 	printf("responseLen of %s is %d\n", uri.c_str(), dataLen);
 
 	if (sess->getStreamNum() == 0) { // finish processing all the rounds
@@ -144,14 +161,19 @@ int submitRequest (sessionInfo * sessInfo, requestInfo * reqInfo) {
 		  gettimeofday(&(sessInfo->sessionEnd), NULL);
 		  int timeSec = sessInfo->sessionEnd.tv_sec - sessInfo->sessionStart.tv_sec;
 		  int timeUsec = sessInfo->sessionEnd.tv_usec - sessInfo->sessionStart.tv_usec;
-		  printf("shutdown session %d running for %d rounds of %d requests\n with time cose %ds %d usec", sessId, sessInfo->roundNum, sessInfo->requestNum, timeSec, timeUsec);
+		  printf("shutdown session %d running for %d rounds of %d requests\n with time cose %ds %d usec\n", sessId, sessInfo->roundNum, sessInfo->requestNum, timeSec, timeUsec);
 	  } else {
 		printf("\n\nstart round %d of session %d\n", sessInfo->roundNum - sessInfo->leftRoundNum + 1, sessId);
+		sessInfo->currentRequestNum = 0;
 		int i = 0;
-		while (i < sessInfo->requestNum) {
-		  sessInfo->requestList[i]->responseLen = 0;
-		  submitRequest(sessInfo, sessInfo->requestList[i]);
-		  i++;
+		if (sessInfo->isConcurrent) {// if concurrent, submit all the requests simultaneous
+		  while (i < sessInfo->requestNum) {
+			submitRequest(sessInfo, sessInfo->requestList[i]);
+			i++;
+		  }
+		  sessInfo->currentRequestNum = sessInfo->requestNum;
+		} else if (sessInfo->currentRequestNum < sessInfo->requestNum) { // if there is still some requests not sent 
+		  submitRequest(sessInfo, sessInfo->requestList[(sessInfo->currentRequestNum)++]);
 		}
 	  }
 	}
@@ -275,9 +297,14 @@ int initSession (sessionInfo * sessInfo) {
 	cout << "session " << sessInfo->sessId << "is connected" << std::endl;
 	gettimeofday(&(sessInfo->connected), NULL);
 	int i = 0;
-	while (i < sessInfo->requestNum) {
-	  submitRequest(sessInfo, sessInfo->requestList[i]);
-	  i++;
+	if (sessInfo->isConcurrent) {// if concurrent, submit all the requests simultaneous
+	  while (i < sessInfo->requestNum) {
+		submitRequest(sessInfo, sessInfo->requestList[i]);
+		i++;
+	  }
+	  sessInfo->currentRequestNum = sessInfo->requestNum;
+	} else if (sessInfo->currentRequestNum < sessInfo->requestNum) { // if there is still some requests not sent 
+	  submitRequest(sessInfo, sessInfo->requestList[(sessInfo->currentRequestNum)++]);
 	}
   });
   sess->on_error([sessInfo](const boost::system::error_code &ec) {
