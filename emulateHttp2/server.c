@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-11-26 15:04:03
+# Last Modified: 2015-11-26 10:47:34
 ************************************************/
 
 #include <stdio.h>
@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
 		  sumSentLen += tempSentLen;
 		}
 		sentSize += sumSentLen;
-		printf("send %d bytes\n", sumSentLen);
+		//printf("send %d bytes\n", sumSentLen);
 	  }
 
 	  // check stop message without blocking
@@ -197,7 +197,6 @@ int main(int argc, char *argv[]) {
 			  printf("append log file failed\n");
 			}
 		  }
-		  printf("close socket and start to wait for another connection\n");
 		  close(acceptedSockFd);
 		  if (fd) {
 			fclose(fd);
@@ -205,12 +204,13 @@ int main(int argc, char *argv[]) {
 		  if (logfd) {
 			fclose(logfd);
 		  }
+		  if (strcmp(buffer, "close") == 0) {
+			printf("recving close command, will quit\n");
+			return 0;
+		  }
 		  break;
 		}
 	  }
-	}
-	if (fd) {
-	  fclose(fd);
 	}
   }
 }
