@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-11-26 12:50:08
+# Last Modified: 2015-11-26 14:46:16
 ************************************************/
 
 #include <stdio.h>
@@ -23,6 +23,7 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #define MAX_CONNECTION_QUEUE 10
 
@@ -129,6 +130,7 @@ int main(int argc, char *argv[]) {
 	  printf("recv request info failed\n");
 	  return 1;
 	}
+	printf("requestInfo: %s\n", requestFile);
 
 	// check File existence and open file
 	if (!checkFileExist(requestFile)) {
@@ -174,6 +176,7 @@ int main(int argc, char *argv[]) {
 		  sumSentLen += tempSentLen;
 		}
 		sentSize += sumSentLen;
+		printf("send %d bytes\n", sumSentLen);
 	  }
 
 	  // check stop message without blocking
@@ -182,6 +185,7 @@ int main(int argc, char *argv[]) {
 	  if (FD_ISSET(acceptedSockFd, &readFds)) {
 		memset(buffer, 0, sizeof buffer);
 		if (recv(acceptedSockFd, buffer, sizeof buffer -1, 0) > 0) {
+		  printf("recved stop msg: %s\n", buffer);
 		  FILE * logfd = fopen(logfileName, "a");
 		  if (!logfd) {
 			printf("open log file failed\n");
@@ -193,6 +197,7 @@ int main(int argc, char *argv[]) {
 			  printf("append log file failed\n");
 			}
 		  }
+		  printf("close socket and start to wait for another connection\n");
 		  close(acceptedSockFd);
 		  if (fd) {
 			fclose(fd);

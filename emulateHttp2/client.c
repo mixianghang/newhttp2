@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2015-11-26 10:51:42
+# Last Modified: 2015-11-26 14:37:26
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,11 +64,11 @@ int main(int argc, char * argv[]) {
   int requestNum = atoi(argv[5]);
   int i = 0;
   while (i < requestNum) {
+	printf("start request for round %d\n", i);
 	i++;
 	clientSockFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (connect(clientSockFd,(struct sockaddr*) &serverAddr_in,(socklen_t)len_sockaddr_in) != 0){
 	  printf("failed to connect to server %s:%d \n", serverIpStr, serverPort);
-	  shutdown(clientSockFd, SHUT_RDWR);
 	  close(clientSockFd);
 	  return 1;
 	} else {
