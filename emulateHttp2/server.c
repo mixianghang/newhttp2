@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-11-26 14:53:16
+# Last Modified: 2015-11-26 15:01:39
 ************************************************/
 
 #include <stdio.h>
@@ -205,6 +205,7 @@ int main(int argc, char *argv[]) {
 		  if (logfd) {
 			fclose(logfd);
 		  }
+		  break;
 		}
 	  }
 	}

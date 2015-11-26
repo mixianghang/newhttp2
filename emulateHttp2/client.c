@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2015-11-26 14:37:26
+# Last Modified: 2015-11-26 14:58:35
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +22,7 @@
 #include <signal.h>
 #include <sys/time.h>
 
-#define RANDOM_RANGE 30
+#define RANDOM_RANGE 10
 #define STOP_MSG "stop"
 
 int main(int argc, char * argv[]) {
@@ -89,6 +89,7 @@ int main(int argc, char * argv[]) {
 		// generate a random number
 		srand(time(NULL));
 		int random = rand() % RANDOM_RANGE + 1;
+		printf("start round %d random %d\n", i, random);
 		struct timeval startTime;
 		struct timeval curTime;
 		gettimeofday(&startTime, NULL);
