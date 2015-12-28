@@ -6,13 +6,14 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-27 16:23:56
-# Last Modified: 2015-12-28 13:06:59
+# Last Modified: 2015-12-28 10:39:54
 ************************************************/
 #include <pcap.h>
 #include <stdio.h>
 #include <netinet/in.h>
 #include <string.h>
-
+#include <arpa/inet.h>
+#include <signal.h>
 /* Ethernet addresses are 6 bytes */
 #define ETHER_ADDR_LEN	6
 
@@ -73,14 +74,23 @@ struct SniffPanel {
   unsigned int packetNum;
   unsigned int payloadSize;
 };
+
+pcap_t *handle;
+struct SniffPanel panel;
 void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet);
+
+void intSignalHandle(int sigNum) {
+  if (handle) {
+	pcap_breakloop(handle);
+  }
+}
 
 int main(int argc, char *argv[]){
   if (argc < 4) {
 	fprintf(stderr, "Usage: ./packetSniff interface filter_expression payloadFile\n");
 	return 1;
   }
-  pcap_t *handle;
+  signal(SIGINT, intSignalHandle);
   char *dev = argv[1];
   char *payloadFilePath = argv[3];
   char errbuf[PCAP_ERRBUF_SIZE];
@@ -97,8 +107,8 @@ int main(int argc, char *argv[]){
 	mask = 0;
   }
   /* Open the session in promiscuous mode */
-  //handle = pcap_open_live(dev, BUFSIZ, 0, 0, errbuf);
-  handle = pcap_open_live(dev, 1000000000, 0, 0, errbuf);
+  handle = pcap_open_live(dev, BUFSIZ, 1, 0, errbuf);
+  //handle = pcap_open_live(dev, 1000000000, 0, 0, errbuf);
   if (handle == NULL) {
 	fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
 	return 2;
@@ -128,15 +138,16 @@ int main(int argc, char *argv[]){
 	return 1;
   }
   payloadFile = freopen(payloadFilePath, "a", payloadFile);
-  struct SniffPanel panel;
   panel.payloadFilePath = payloadFilePath;
   panel.payloadFile = payloadFile;
   panel.packetNum = 0;
   panel.payloadSize = 0;
-  pcap_loop(handle, 0, got_packet, (u_char *)&panel);
+  int response_loop = pcap_loop(handle, -1, got_packet, (u_char *)&panel);
   /* pcap close the handle*/
   pcap_close(handle);
   fclose(payloadFile);
+  printf("response code of loop is %d", response_loop);
+  printf("finish with len %d and packet num %d\n", panel.payloadSize, panel.packetNum);
   return 0;
 }
 
@@ -160,6 +171,12 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 	  return;
   }
   tcp = (struct sniff_tcp*)(packet + SIZE_ETHERNET + size_ip);
+  char srcIpStr[15] = {0};
+  char dstIpStr[15] = {0};
+  int srcPort = ntohs(tcp->th_sport);
+  int dstPort = ntohs(tcp->th_dport);
+  inet_ntop(AF_INET, (void *) (&(ip->ip_src)), srcIpStr, 14);
+  inet_ntop(AF_INET, (void *) (&(ip->ip_dst)), dstIpStr, 14);
   size_tcp = TH_OFF(tcp)*4;
   if (size_tcp < 20) {
 	  printf("   * Invalid TCP header length: %u bytes\n", size_tcp);
@@ -167,11 +184,12 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   }
   payload = (u_char *)(packet + SIZE_ETHERNET + size_ip + size_tcp);
   int payloadLen = header->len - SIZE_ETHERNET - size_tcp - size_ip;
+  printf("source: %s:%d, dst: %s:%d\n", srcIpStr, srcPort, dstIpStr, dstPort);
   printf("packetNum: %d, len: %d, ethernet header: %d, ip header: %d, tcp header: %d, payload: %d\n", panel->packetNum, header->len, SIZE_ETHERNET, size_ip, size_tcp, payloadLen);
   panel->payloadSize += payloadLen;
-  printf("sum size is %d, strlen of current payload is %d\n", panel->payloadSize, strlen(payload)); 
-  *(payload + payloadLen) = 0;
   //printf("%s\n", payload);
-  fprintf(payloadFile, "%s", payload);
+  int writeToFileLen = fwrite(payload, sizeof(char), payloadLen, panel->payloadFile); 
+  printf("sum size is %d, write to file: %d\n", panel->payloadSize, writeToFileLen); 
+  //fprintf(payloadFile, "%s", payload);
   return;
 }
