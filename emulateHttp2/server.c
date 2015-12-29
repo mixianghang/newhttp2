@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-11-26 10:47:34
+# Last Modified: 2015-12-29 17:38:04
 ************************************************/
 
 #include <stdio.h>
@@ -93,21 +93,24 @@ int main(int argc, char *argv[]) {
   }
 
   listen(listenSockFd,MAX_CONNECTION_QUEUE);
+  int isCancel = 0;
+  char clientIp[20];
+  int clientPort;
+  struct sockaddr_in clientAddr;
+  socklen_t addrLen = sizeof (struct sockaddr_in);
   while (1) {
-	char clientIp[20];
-	int clientPort;
-	struct sockaddr_in clientAddr;
-	socklen_t addrLen = sizeof (struct sockaddr_in);
-	acceptedSockFd = accept(listenSockFd, (struct sockaddr *)&clientAddr, &addrLen);
-	if (acceptedSockFd >= 0) {
-	  clientPort = ntohs(clientAddr.sin_port);
-	  memset(clientIp, 0, sizeof clientIp);
-	  inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIp, 19);
-	  printf("start to serve request from client %s:%d\n", clientIp, clientPort);
-	} else {
-	  printf("failed to accept new request\n");
-	  close(listenSockFd);
-	  return 1;
+	if (!isCancel) {
+	  acceptedSockFd = accept(listenSockFd, (struct sockaddr *)&clientAddr, &addrLen);
+	  if (acceptedSockFd >= 0) {
+		clientPort = ntohs(clientAddr.sin_port);
+		memset(clientIp, 0, sizeof clientIp);
+		inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIp, 19);
+		printf("start to serve request from client %s:%d\n", clientIp, clientPort);
+	  } else {
+		printf("failed to accept new request\n");
+		close(listenSockFd);
+		return 1;
+	  }
 	}
 	fd_set originalFds;
 	fd_set readFds;
@@ -197,16 +200,17 @@ int main(int argc, char *argv[]) {
 			  printf("append log file failed\n");
 			}
 		  }
-		  close(acceptedSockFd);
+		  if (strcmp(buffer, "stop") == 0) {
+			isCancel = 1;
+		  } else if (strcmp(buffer, "close") == 0) {
+			close(acceptedSockFd);
+			isCancel = 0;
+		  }
 		  if (fd) {
 			fclose(fd);
 		  }
 		  if (logfd) {
 			fclose(logfd);
-		  }
-		  if (strcmp(buffer, "close") == 0) {
-			printf("recving close command, will quit\n");
-			return 0;
 		  }
 		  break;
 		}
