@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-12-30 12:55:33
+# Last Modified: 2015-12-30 13:15:37
 ************************************************/
 
 #include <stdio.h>
@@ -132,7 +132,8 @@ int main(int argc, char *argv[]) {
 	int recvStatus = recv(acceptedSockFd, requestFile, sizeof requestFile - 1, 0); 
 	if (recvStatus < 0) {
 	  printf("recv request info failed\n");
-	  return 1;
+	  close(acceptedSockFd);
+	  continue;
 	} else if (recvStatus == 0) {
 	  isCancel = 0;
 	  printf("client has closed this connection\n");
