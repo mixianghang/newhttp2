@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-12-30 13:22:10
+# Last Modified: 2015-12-30 13:29:37
 ************************************************/
 
 #include <stdio.h>
@@ -106,6 +106,9 @@ int main(int argc, char *argv[]) {
 		memset(clientIp, 0, sizeof clientIp);
 		inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIp, 19);
 		printf("start to serve request from client %s:%d\n", clientIp, clientPort);
+		struct timeval tv;
+		tv.tv_sec = 30;  /* 30 Secs Timeout */
+		setsockopt(acceptedSockFd, SOL_SOCKET, SO_RCVTIMEO,(struct timeval *)&tv,sizeof(struct timeval));
 	  } else {
 		printf("failed to accept new request\n");
 		close(listenSockFd);
