@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2015-12-29 22:12:08
+# Last Modified: 2015-12-30 12:55:49
 ************************************************/
 #include "client.h"
 
@@ -59,13 +59,19 @@ int main(int argc, char * argv[]) {
   while (i < requestNum) {
 	i++;
 	//create connection to server
-	if (i == 1 || !isCancel) {
-	  if (createNewConn(&sockInfo) != 0) {
-		fprintf(stderr, "create new connection failed \n");
-		return 1;
-	  } else {
-		printf("connect to server %s:%d successfully from port %d\n", sockInfo.serverIpStr, sockInfo.serverPort, sockInfo.clientPort);
-	  }
+	//if (i == 1 || !isCancel) {
+	//  if (createNewConn(&sockInfo) != 0) {
+	//	fprintf(stderr, "create new connection failed \n");
+	//	return 1;
+	//  } else {
+	//	printf("connect to server %s:%d successfully from port %d\n", sockInfo.serverIpStr, sockInfo.serverPort, sockInfo.clientPort);
+	//  }
+	//}
+	if (createNewConn(&sockInfo) != 0) {
+	  fprintf(stderr, "create new connection failed \n");
+	  return 1;
+	} else {
+	  printf("connect to server %s:%d successfully from port %d\n", sockInfo.serverIpStr, sockInfo.serverPort, sockInfo.clientPort);
 	}
 
 	//configure packet sniff and start thread
@@ -103,7 +109,7 @@ int main(int argc, char * argv[]) {
 	  return 1;
 	}
 
-	//decide whether to close sock
+	//decide whether to close sock immediately after sending out cancel signal
 	if (!isCancel) {
 	  close(sockInfo.clientSockFd);
 	}
@@ -116,12 +122,16 @@ int main(int argc, char * argv[]) {
 	}
 
 	//sleep and wait for finishing packets sniff
-	sleep(30);
+	sleep(15);
 	if (stopSniff(&sniffPanel) != 0) {
 	  fprintf(stderr, "stop sniff failed\n");
 	  return 1;
 	} else {
 	  printf("finish stopping sniff with packets: %d, payloadSize: %d\n", sniffPanel.packetNum, sniffPanel.payloadSize);
+	}
+	//if is cancel test, close sock after waiting some time 
+	if (isCancel) {
+	  close(sockInfo.clientSockFd);
 	}
   }
 }
