@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-27 16:23:56
-# Last Modified: 2015-12-30 11:44:02
+# Last Modified: 2015-12-29 18:48:17
 ************************************************/
 #include "packetSniff.h"
 
@@ -20,7 +20,7 @@ void intSignalHandle(int sigNum) {
   }
 }
 
-int main(int argc, char *argv[]){
+int main1(int argc, char *argv[]){
   if (argc < 4) {
 	fprintf(stderr, "Usage: ./packetSniff interface filter_expression payloadFile\n");
 	return 1;
@@ -105,7 +105,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   if (size_ip < 20) {
 	  memset(logMsg, 0, sizeof logMsg);
 	  snprintf(logMsg, sizeof logMsg - 1, "   * Invalid IP header length: %u bytes\n", size_ip);
-	  fprintf(stderr, "%s", logMsg);
+	  panel->cbWhenError(panel, 1, logMsg, panel->errorArgs);
 	  return;
   }
   tcp = (struct sniff_tcp*)(packet + SIZE_ETHERNET + size_ip);
@@ -119,7 +119,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   if (size_tcp < 20) {
 	  memset(logMsg, 0, sizeof logMsg);
 	  snprintf(logMsg, sizeof logMsg - 1, "   * Invalid TCP header length: %u bytes\n", size_tcp);
-	  fprintf(stderr, "%s", logMsg);
+	  panel->cbWhenError(panel, 1, logMsg, panel->errorArgs);
 	  return;
   }
   payload = (char *)(packet + SIZE_ETHERNET + size_ip + size_tcp);
@@ -129,7 +129,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   (panel->cbLog)(logMsg);
   memset(logMsg, 0, sizeof logMsg);
   snprintf(logMsg, sizeof logMsg - 1, "packetNum: %d, len: %d, ethernet header: %d, ip header: %d, tcp header: %d, payload: %d\n", panel->packetNum, header->len, SIZE_ETHERNET, size_ip, size_tcp, payloadLen);
-  printf("%s", logMsg);
+  panel->cbLog(logMsg);
   panel->payloadSize += payloadLen;
   int writeToFileLen = 0;
   //printf("%s\n", payload);
@@ -138,7 +138,8 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   }
   memset(logMsg, 0, sizeof logMsg);
   snprintf(logMsg, sizeof logMsg - 1, "sum size is %d, write to file: %d\n", panel->payloadSize, writeToFileLen); 
-  printf("%s", logMsg);
+  panel->cbLog(logMsg);
+  //fprintf(payloadFile, "%s", payload);
   return;
 }
 

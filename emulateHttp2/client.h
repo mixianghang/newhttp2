@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-28 20:59:31
-# Last Modified: 2015-12-29 15:21:31
+# Last Modified: 2015-12-30 11:13:24
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +24,7 @@
 #include <pthread.h>
 #include "packetSniff.h"
 
-#define RANDOM_RANGE 10
+#define RANDOM_RANGE 20
 #define STOP_MSG "stop"
 #define CLOSE_MSG "close"
 #define FILE_NAME_SIZE 1024

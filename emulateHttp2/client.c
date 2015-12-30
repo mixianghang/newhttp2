@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2015-12-29 20:28:12
+# Last Modified: 2015-12-29 22:12:08
 ************************************************/
 #include "client.h"
 
@@ -269,7 +269,7 @@ void cbForSniffError(const struct SniffPanel *panel,const int errorCode, char * 
 }
 //output sniff log
 void cbForSniffLog(const char * logMsg) {
- printf("log from sniff: %s", logMsg);
+ //printf("log from sniff: %s", logMsg);
  //printf("this is %s\n", __func__);
 }
 /* thread function for packet sniff*/
