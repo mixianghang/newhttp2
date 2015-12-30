@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2015-12-30 12:55:49
+# Last Modified: 2015-12-30 13:06:35
 ************************************************/
 #include "client.h"
 
@@ -122,7 +122,7 @@ int main(int argc, char * argv[]) {
 	}
 
 	//sleep and wait for finishing packets sniff
-	sleep(15);
+	sleep(30);
 	if (stopSniff(&sniffPanel) != 0) {
 	  fprintf(stderr, "stop sniff failed\n");
 	  return 1;
