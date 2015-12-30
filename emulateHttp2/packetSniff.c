@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-27 16:23:56
-# Last Modified: 2015-12-30 11:44:02
+# Last Modified: 2015-12-30 11:54:34
 ************************************************/
 #include "packetSniff.h"
 
@@ -126,7 +126,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   int payloadLen = header->len - SIZE_ETHERNET - size_tcp - size_ip;
   memset(logMsg, 0, sizeof logMsg);
   snprintf(logMsg, sizeof logMsg - 1, "source: %s:%d, dst: %s:%d\n", srcIpStr, srcPort, dstIpStr, dstPort);
-  (panel->cbLog)(logMsg);
+  printf("%s", logMsg);
   memset(logMsg, 0, sizeof logMsg);
   snprintf(logMsg, sizeof logMsg - 1, "packetNum: %d, len: %d, ethernet header: %d, ip header: %d, tcp header: %d, payload: %d\n", panel->packetNum, header->len, SIZE_ETHERNET, size_ip, size_tcp, payloadLen);
   printf("%s", logMsg);
