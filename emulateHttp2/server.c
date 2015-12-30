@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-12-29 21:19:47
+# Last Modified: 2015-12-29 21:23:58
 ************************************************/
 
 #include <stdio.h>
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
 	  unsigned int tempReadLen = 0;
 	  memset(buffer, 0, sizeof buffer);
 	  if ((tempReadLen = fread(buffer, sizeof(char), sizeof buffer -1, fd)) <= 0) {
-		printf("read file failed\n");
+		printf("read file failed %d\n", tempReadLen);
 		close(acceptedSockFd);
 		break;
 	  }
