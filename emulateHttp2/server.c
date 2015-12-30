@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-12-29 17:38:04
+# Last Modified: 2015-12-29 20:29:45
 ************************************************/
 
 #include <stdio.h>
@@ -129,9 +129,15 @@ int main(int argc, char *argv[]) {
 	  continue;
 	}
 	char requestFile[1024] = {0};
-	if (recv(acceptedSockFd, requestFile, sizeof requestFile - 1, 0) <= 0) {
+	int recvStatus = recv(acceptedSockFd, requestFile, sizeof requestFile - 1, 0) 
+	if (recvStatus < 0) {
 	  printf("recv request info failed\n");
 	  return 1;
+	} else if (recvStatus == 0) {
+	  isCancel = 0;
+	  printf("client has closed this connection\n");
+	  close(acceptedSockFd);
+	  continue;
 	}
 	printf("requestInfo: %s\n", requestFile);
 
@@ -212,6 +218,7 @@ int main(int argc, char *argv[]) {
 		  if (logfd) {
 			fclose(logfd);
 		  }
+		  printf("send size is %u\n", sentSize);
 		  break;
 		}
 	  }
@@ -230,7 +237,7 @@ int createLogfileName(char * resultStr, int maxSize) {
   time(&now);
   timeInfo = localtime(&now);
 
-  char timeFormat[] = "%Y_%m_%d_%H_%M.cvs";
+  char timeFormat[] = "%Y_%m_%d_%H_%M.csv";
   char timeStr[1024] = {0};
   strftime(resultStr, maxSize, timeFormat, timeInfo);
   return 0;

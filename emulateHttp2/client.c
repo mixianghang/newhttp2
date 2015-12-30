@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2015-12-29 19:08:21
+# Last Modified: 2015-12-29 20:28:12
 ************************************************/
 #include "client.h"
 
@@ -116,7 +116,7 @@ int main(int argc, char * argv[]) {
 	}
 
 	//sleep and wait for finishing packets sniff
-	sleep(10);
+	sleep(30);
 	if (stopSniff(&sniffPanel) != 0) {
 	  fprintf(stderr, "stop sniff failed\n");
 	  return 1;
@@ -151,7 +151,7 @@ int recvWithInRandom(struct ClientSockInfo *sockInfo, int random) {
 	  if (tempNum <= 0) {
 		return 1;
 	  }
-	  printf("recved %d bytes in %s\n", tempNum, __func__);
+	  //printf("recved %d bytes in %s\n", tempNum, __func__);
 	  recvedBytes += tempNum;
 	}
   }
