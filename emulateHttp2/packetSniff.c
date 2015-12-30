@@ -6,74 +6,9 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-27 16:23:56
-# Last Modified: 2015-12-28 10:39:54
+# Last Modified: 2015-12-29 18:48:17
 ************************************************/
-#include <pcap.h>
-#include <stdio.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <signal.h>
-/* Ethernet addresses are 6 bytes */
-#define ETHER_ADDR_LEN	6
-
-/* Ethernet header */
-struct sniff_ethernet {
-	u_char ether_dhost[ETHER_ADDR_LEN]; /* Destination host address */
-	u_char ether_shost[ETHER_ADDR_LEN]; /* Source host address */
-	u_short ether_type; /* IP? ARP? RARP? etc */
-};
-
-/* IP header */
-struct sniff_ip {
-	u_char ip_vhl;		/* version << 4 | header length >> 2 */
-	u_char ip_tos;		/* type of service */
-	u_short ip_len;		/* total length */
-	u_short ip_id;		/* identification */
-	u_short ip_off;		/* fragment offset field */
-#define IP_RF 0x8000		/* reserved fragment flag */
-#define IP_DF 0x4000		/* dont fragment flag */
-#define IP_MF 0x2000		/* more fragments flag */
-#define IP_OFFMASK 0x1fff	/* mask for fragmenting bits */
-	u_char ip_ttl;		/* time to live */
-	u_char ip_p;		/* protocol */
-	u_short ip_sum;		/* checksum */
-	struct in_addr ip_src,ip_dst; /* source and dest address */
-};
-#define IP_HL(ip)		(((ip)->ip_vhl) & 0x0f)
-#define IP_V(ip)		(((ip)->ip_vhl) >> 4)
-
-/* TCP header */
-typedef u_int tcp_seq;
-
-struct sniff_tcp {
-	u_short th_sport;	/* source port */
-	u_short th_dport;	/* destination port */
-	tcp_seq th_seq;		/* sequence number */
-	tcp_seq th_ack;		/* acknowledgement number */
-	u_char th_offx2;	/* data offset, rsvd */
-#define TH_OFF(th)	(((th)->th_offx2 & 0xf0) >> 4)
-	u_char th_flags;
-#define TH_FIN 0x01
-#define TH_SYN 0x02
-#define TH_RST 0x04
-#define TH_PUSH 0x08
-#define TH_ACK 0x10
-#define TH_URG 0x20
-#define TH_ECE 0x40
-#define TH_CWR 0x80
-#define TH_FLAGS (TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG|TH_ECE|TH_CWR)
-	u_short th_win;		/* window */
-	u_short th_sum;		/* checksum */
-	u_short th_urp;		/* urgent pointer */
-};
-
-struct SniffPanel {
-  char * payloadFilePath;
-  FILE * payloadFile;
-  unsigned int packetNum;
-  unsigned int payloadSize;
-};
+#include "packetSniff.h"
 
 pcap_t *handle;
 struct SniffPanel panel;
@@ -85,7 +20,7 @@ void intSignalHandle(int sigNum) {
   }
 }
 
-int main(int argc, char *argv[]){
+int main1(int argc, char *argv[]){
   if (argc < 4) {
 	fprintf(stderr, "Usage: ./packetSniff interface filter_expression payloadFile\n");
 	return 1;
@@ -161,13 +96,16 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   const struct sniff_ip *ip; /* The IP header */
   const struct sniff_tcp *tcp; /* The TCP header */
   char *payload; /* Packet payload */
+  char logMsg[1024] = {0};
   u_int size_ip;
   u_int size_tcp;
   ethernet = (struct sniff_ethernet*)(packet);
   ip = (struct sniff_ip*)(packet + SIZE_ETHERNET);
   size_ip = IP_HL(ip)*4;
   if (size_ip < 20) {
-	  printf("   * Invalid IP header length: %u bytes\n", size_ip);
+	  memset(logMsg, 0, sizeof logMsg);
+	  snprintf(logMsg, sizeof logMsg - 1, "   * Invalid IP header length: %u bytes\n", size_ip);
+	  panel->cbWhenError(panel, 1, logMsg, panel->errorArgs);
 	  return;
   }
   tcp = (struct sniff_tcp*)(packet + SIZE_ETHERNET + size_ip);
@@ -179,17 +117,126 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   inet_ntop(AF_INET, (void *) (&(ip->ip_dst)), dstIpStr, 14);
   size_tcp = TH_OFF(tcp)*4;
   if (size_tcp < 20) {
-	  printf("   * Invalid TCP header length: %u bytes\n", size_tcp);
+	  memset(logMsg, 0, sizeof logMsg);
+	  snprintf(logMsg, sizeof logMsg - 1, "   * Invalid TCP header length: %u bytes\n", size_tcp);
+	  panel->cbWhenError(panel, 1, logMsg, panel->errorArgs);
 	  return;
   }
-  payload = (u_char *)(packet + SIZE_ETHERNET + size_ip + size_tcp);
+  payload = (char *)(packet + SIZE_ETHERNET + size_ip + size_tcp);
   int payloadLen = header->len - SIZE_ETHERNET - size_tcp - size_ip;
-  printf("source: %s:%d, dst: %s:%d\n", srcIpStr, srcPort, dstIpStr, dstPort);
-  printf("packetNum: %d, len: %d, ethernet header: %d, ip header: %d, tcp header: %d, payload: %d\n", panel->packetNum, header->len, SIZE_ETHERNET, size_ip, size_tcp, payloadLen);
+  memset(logMsg, 0, sizeof logMsg);
+  snprintf(logMsg, sizeof logMsg - 1, "source: %s:%d, dst: %s:%d\n", srcIpStr, srcPort, dstIpStr, dstPort);
+  (panel->cbLog)(logMsg);
+  memset(logMsg, 0, sizeof logMsg);
+  snprintf(logMsg, sizeof logMsg - 1, "packetNum: %d, len: %d, ethernet header: %d, ip header: %d, tcp header: %d, payload: %d\n", panel->packetNum, header->len, SIZE_ETHERNET, size_ip, size_tcp, payloadLen);
+  panel->cbLog(logMsg);
   panel->payloadSize += payloadLen;
+  int writeToFileLen = 0;
   //printf("%s\n", payload);
-  int writeToFileLen = fwrite(payload, sizeof(char), payloadLen, panel->payloadFile); 
-  printf("sum size is %d, write to file: %d\n", panel->payloadSize, writeToFileLen); 
+  if (panel->payloadFile != NULL) {
+	writeToFileLen = fwrite(payload, sizeof(char), payloadLen, panel->payloadFile); 
+  }
+  memset(logMsg, 0, sizeof logMsg);
+  snprintf(logMsg, sizeof logMsg - 1, "sum size is %d, write to file: %d\n", panel->payloadSize, writeToFileLen); 
+  panel->cbLog(logMsg);
   //fprintf(payloadFile, "%s", payload);
   return;
+}
+
+/**
+compile filter expression, open sniff handler
+*/
+int initSniff(SniffPanel *panel) {
+  pcap_t *handle;
+  char *dev = panel->device;
+  char errbuf[1024] = {0};
+  struct bpf_program fp;		/* The compiled filter */
+  char *filter_exp = panel->filterExpression;	/* The filter expression */
+  unsigned int liveReadTimeOut = panel->liveReadTimeOut;
+  bpf_u_int32 mask;		/* Our netmask */
+  bpf_u_int32 net;		/* Our IP */
+  if (dev == NULL) {
+	panel->cbWhenError(panel, 2, "device cannot be NULL\n", panel->errorArgs);
+	return 2;
+  }
+  /* Find the properties for the device */
+  if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
+	panel->cbWhenError(panel, 2, errbuf, panel->errorArgs);
+	net = 0;
+	mask = 0;
+  }
+  /* Open the session in promiscuous mode */
+  handle = pcap_open_live(dev, BUFSIZ, 0, liveReadTimeOut, errbuf);
+  //handle = pcap_open_live(dev, 1000000000, 0, 0, errbuf);
+  if (handle == NULL) {
+	panel->cbWhenError(panel, 2, errbuf, panel->errorArgs);
+	return 2;
+  }
+  /* Compile and apply the filter */
+  if (pcap_compile(handle, &fp, filter_exp, 0, net) == -1) {
+	memset(errbuf, 0, sizeof errbuf);
+	snprintf(errbuf, sizeof errbuf -1, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(handle));
+	panel->cbWhenError(panel, 2, errbuf, panel->errorArgs);
+	return 2;
+  }
+
+  if (pcap_setfilter(handle, &fp) == -1) {
+	memset(errbuf, 0, sizeof errbuf);
+	snprintf(errbuf, sizeof errbuf -1, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(handle));
+	panel->cbWhenError(panel, 2, errbuf, panel->errorArgs);
+	return 2;
+  }
+  panel->handle = handle;
+  panel->net = net;
+  panel->mask = mask;
+  panel->fp = fp;
+  return 0;
+}
+
+/** run the sniffer*/
+int runSniff(SniffPanel *panel) {
+  printf("run sniff %s\n", __func__);
+  char errbuf[1024] = {0};
+  pcap_t *handle = panel->handle;
+  if (handle == NULL) {
+	memset(errbuf, 0, sizeof errbuf);
+	snprintf(errbuf, sizeof errbuf -1, "handle cannot be NULL in %s %s %d", __FILE__, __func__, __LINE__);
+	panel->cbWhenError(panel, 2, errbuf, panel->errorArgs);
+	return 2;
+  }
+  int response_loop = pcap_loop(handle, -1, got_packet, (u_char *)panel);
+  if (response_loop == -1) {
+	memset(errbuf, 0, sizeof errbuf);
+	snprintf(errbuf, sizeof errbuf -1, "pcap_loop returns error of %s in %s %s %d", pcap_geterr(handle), __FILE__, __func__, __LINE__);
+	panel->cbWhenError(panel, 2, errbuf, panel->errorArgs);
+	return -1;
+  } else if (response_loop == -2) {
+	panel->cbAfterSniff(panel, panel->afterSniffArgs);
+	panel->isStopped = 1;
+  }
+  return 0;
+}
+
+/** stop the sniffer*/
+int stopSniff(SniffPanel *panel) {
+  pcap_t * handle = panel->handle;
+  if (handle) {
+	pcap_breakloop(handle);
+	while (1) {
+	  if (panel->isStopped) {
+		return 0;
+	  }
+	  sleep(1);
+	}
+  }
+  return 0;
+}
+
+/* clean the sniffer*/
+int cleanSniff(SniffPanel *panel) {
+  if (panel->handle) {
+	pcap_close(panel->handle);
+	panel->handle = NULL;
+  }
+  return 0;
 }
