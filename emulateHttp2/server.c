@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-12-30 13:15:37
+# Last Modified: 2015-12-30 13:22:10
 ************************************************/
 
 #include <stdio.h>
@@ -131,6 +131,7 @@ int main(int argc, char *argv[]) {
 	char requestFile[1024] = {0};
 	int recvStatus = recv(acceptedSockFd, requestFile, sizeof requestFile - 1, 0); 
 	if (recvStatus < 0) {
+	  isCancel = 0;
 	  printf("recv request info failed\n");
 	  close(acceptedSockFd);
 	  continue;
