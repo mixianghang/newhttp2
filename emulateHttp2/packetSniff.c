@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-27 16:23:56
-# Last Modified: 2015-12-30 11:54:34
+# Last Modified: 2015-12-30 12:19:38
 ************************************************/
 #include "packetSniff.h"
 
@@ -134,7 +134,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   int writeToFileLen = 0;
   //printf("%s\n", payload);
   if (panel->payloadFile != NULL) {
-	writeToFileLen = fwrite(payload, sizeof(char), payloadLen, panel->payloadFile); 
+	//writeToFileLen = fwrite(payload, sizeof(char), payloadLen, panel->payloadFile); 
   }
   memset(logMsg, 0, sizeof logMsg);
   snprintf(logMsg, sizeof logMsg - 1, "sum size is %d, write to file: %d\n", panel->payloadSize, writeToFileLen); 
