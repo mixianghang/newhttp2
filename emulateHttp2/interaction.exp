@@ -1,0 +1,10 @@
+#!/usr/bin/expect
+# set script "sudo perl set_bw_limit.pl 10mbit;"
+set script [lindex $argv 0]
+set timeout 5
+spawn ssh  -o StrictHostKeyChecking=no labserver "$script"
+expect {
+    "*password*" {send "tang9111113\r";puts "login"; return}
+    #timeout { puts "sorry, it is timeout"; return}
+    eof { puts "closed"; return}
+}

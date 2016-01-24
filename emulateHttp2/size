@@ -1,0 +1,51 @@
+{
+  "handle" : "TT640-RIPE",
+  "vcardArray" : [ "vcard", [ [ "version", { }, "text", "4.0" ], [ "fn", { }, "text", "Tellas-Tech Role" ], [ "kind", { }, "text", "group" ], [ "adr", {
+    "label" : "Kifissias 64, Marousi\nMaroussi, 151-25\nGreece"
+  }, "text", null ], [ "tel", {
+    "type" : "voice"
+  }, "text", "+302105100326" ], [ "tel", {
+    "type" : "fax"
+  }, "text", "+30210 6158 955" ], [ "email", { }, "text", "i.tsoukali@wind.gr" ], [ "email", { }, "text", "e.saridaki@wind.gr" ] ] ],
+  "rdapConformance" : [ "rdap_level_0" ],
+  "entities" : [ {
+    "handle" : "ES5568-RIPE",
+    "roles" : [ "technical", "administrative" ]
+  }, {
+    "handle" : "IT301-RIPE",
+    "roles" : [ "technical", "administrative" ]
+  }, {
+    "handle" : "Tellas-MNT",
+    "roles" : [ "registrant" ]
+  } ],
+  "links" : [ {
+    "value" : "https://rdap.db.ripe.net/entity/TT640-RIPE",
+    "rel" : "self",
+    "href" : "https://rdap.db.ripe.net/entity/TT640-RIPE"
+  }, {
+    "value" : "http://www.ripe.net/data-tools/support/documentation/terms",
+    "rel" : "copyright",
+    "href" : "http://www.ripe.net/data-tools/support/documentation/terms"
+  } ],
+  "events" : [ {
+    "eventAction" : "last changed",
+    "eventDate" : "2015-03-23T15:10:39Z"
+  } ],
+  "notices" : [ {
+    "title" : "Filtered",
+    "description" : [ "This output has been filtered." ]
+  }, {
+    "title" : "Source",
+    "description" : [ "Objects returned came from source", "RIPE" ]
+  }, {
+    "title" : "Terms and Conditions",
+    "description" : [ "This is the RIPE Database query service. The objects are in RDAP format." ],
+    "links" : [ {
+      "value" : "https://rdap.db.ripe.net/entity/TT640-RIPE",
+      "rel" : "terms-of-service",
+      "href" : "http://www.ripe.net/db/support/db-terms-conditions.pdf",
+      "type" : "application/pdf"
+    } ]
+  } ],
+  "port43" : "whois.ripe.net"
+}

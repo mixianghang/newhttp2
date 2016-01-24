@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-12-30 13:29:37
+# Last Modified: 2015-12-30 14:47:26
 ************************************************/
 
 #include <stdio.h>
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 	  } else {
 		printf("failed to accept new request\n");
 		close(listenSockFd);
-		return 1;
+		continue;
 	  }
 	}
 	fd_set originalFds;

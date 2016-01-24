@@ -6,27 +6,30 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2015-12-30 13:06:35
+# Last Modified: 2016-01-24 10:48:01
 ************************************************/
 #include "client.h"
 
 int main(int argc, char * argv[]) {
   //check comand line paremeters
-  if (argc < 8) {
-	  printf("usage: client ip port requestfilename requestNum cancelOrStop(1 is cancel, 0 is stop) netinterface filterExpression\n");
+  if (argc < 9) {
+	  printf("usage: client ip port requestfilename requestNum cancelOrStop(1 is cancel, 0 is stop) netinterface filterExpression serverbandstatus\n");
 	  return 1;
   }
   // check cancel parameter
   int isCancel = 0;
+  char *prefix = argv[8];
   if (strcmp(argv[5], "1") == 0) {
 	isCancel = 1;
   }
   //init logFile
   char logFile[FILE_NAME_SIZE] = {0};
-  if (initLogFile(logFile, sizeof logFile -1, isCancel) != 0) {
+  if (initLogFile(logFile, sizeof logFile -1, isCancel, prefix) != 0) {
 	fprintf(stderr, "init logfile failed\n");
 	return 1;
   }
+  printf("isCancel:%d\n", isCancel);
+  printf("log file name is %s\n", logFile);
   struct ClientSockInfo sockInfo;
   if (initClientSockInfo(&sockInfo, argv[1], argv[2]) == 0) {
 	printf("init client sockinfo successfully\n");
@@ -48,6 +51,7 @@ int main(int argc, char * argv[]) {
   sniffPanel.cbLog        = &cbForSniffLog;
   sniffPanel.afterSniffArgs = (void *)logFile;
   sniffPanel.errorArgs      = NULL;
+  sniffPanel.isStopped      = 1;
   if (initSniff(&sniffPanel) != 0) {
 	fprintf(stderr, "init packet sniff error\n");
 	return 1;
@@ -57,7 +61,17 @@ int main(int argc, char * argv[]) {
   pthread_t sniffThread;
   int i = 0;
   while (i < requestNum) {
+	if (!sniffPanel.isStopped) {
+	  printf("we need to stop the last sniff before starting new round\n");
+	  if (stopSniff(&sniffPanel) != 0) {
+		fprintf(stderr, "stop sniff failed\n");
+		continue;
+	  } else {
+		printf("finish stopping the last sniff before starting new round\n");
+	  }
+	}
 	i++;
+    printf("round %d\n", i);
 	//create connection to server
 	//if (i == 1 || !isCancel) {
 	//  if (createNewConn(&sockInfo) != 0) {
@@ -68,8 +82,9 @@ int main(int argc, char * argv[]) {
 	//  }
 	//}
 	if (createNewConn(&sockInfo) != 0) {
+      i--;
 	  fprintf(stderr, "create new connection failed \n");
-	  return 1;
+      continue;
 	} else {
 	  printf("connect to server %s:%d successfully from port %d\n", sockInfo.serverIpStr, sockInfo.serverPort, sockInfo.clientPort);
 	}
@@ -85,20 +100,28 @@ int main(int argc, char * argv[]) {
 	if (sendRequest(&sockInfo, requestFileName, strlen(requestFileName)) == 0) {
 	  printf("send request successfully\n");
 	} else {
-	  fprintf(stderr, "send request successfully\n");
-	  return 1;
+	  fprintf(stderr, "send request failed\n");
+	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+      i--;
+      continue;
 	}
 
 	//receive response within random time
 	int randomSecs = generateRandom(RANDOM_RANGE);
+	randomSecs += 10;
 	sockInfo.recvedBytes = 0;
 	printf("start to recv within %d seconds\n", randomSecs);
 	if (recvWithInRandom(&sockInfo, randomSecs) == 0) {
 	  printf("recv %d bytes in %d seconds\n", sockInfo.recvedBytes, randomSecs);
 	} else {
 	  fprintf(stderr, "recv failed in round %d with random %d\n", i, randomSecs);
-	  return 1;
+	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+      i--;
+      continue;
 	}
+
+	int packetNum = sniffPanel.packetNum;
+	int payloadSize = sniffPanel.payloadSize;
 
 	//send cancel or close signal
 	const char *signal = isCancel? STOP_MSG : CLOSE_MSG;
@@ -106,33 +129,62 @@ int main(int argc, char * argv[]) {
 	  printf("finish sending signal : %s\n", signal);
 	} else {
 	  fprintf(stderr, "failed to send signal\n");
-	  return 1;
+	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+      i--;
+      continue;
 	}
 
 	//decide whether to close sock immediately after sending out cancel signal
 	if (!isCancel) {
-	  close(sockInfo.clientSockFd);
+	  printf("shutdown for close test\n");
+	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
 	}
 	//record log
 	if (appendLog(logFile, &sockInfo, randomSecs) == 0) {
 	  printf("finish appending new log\n");
 	} else {
 	  fprintf(stderr, "failed to append new log\n");
-	  return 1;
+	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+      i--;
+      continue;
+	}
+
+	FILE * logFd =  fopen(logFile, "a");
+	if (logFd == NULL) {
+	  fprintf(stderr, "failed to append new log\n");
+	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+      i--;
+      continue;
+	} else {
+	  char logStr[1024] = {0};
+	  snprintf(logStr, sizeof logStr - 1, "%d,%d", packetNum, payloadSize);
+	  if (fwrite(logStr, sizeof(char), strlen(logStr), logFd) < strlen(logStr)) {
+		fprintf(stderr, "failed to append new log\n");
+		shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+		i--;
+		continue;
+	  }
+	  fclose(logFd);
 	}
 
 	//sleep and wait for finishing packets sniff
-	sleep(30);
+	int sleepTime = 15;
+	printf("start to sleep for %d seconds\n", sleepTime);
+	sleep(sleepTime);
 	if (stopSniff(&sniffPanel) != 0) {
 	  fprintf(stderr, "stop sniff failed\n");
-	  return 1;
+	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+      i--;
+      continue;
 	} else {
 	  printf("finish stopping sniff with packets: %d, payloadSize: %d\n", sniffPanel.packetNum, sniffPanel.payloadSize);
 	}
 	//if is cancel test, close sock after waiting some time 
 	if (isCancel) {
-	  close(sockInfo.clientSockFd);
+	  printf("shutdown connection for cancel test\n");
+	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
 	}
+	close(sockInfo.clientSockFd);
   }
 }
 
@@ -210,7 +262,7 @@ int sendRequest(struct ClientSockInfo *sockInfo, const char * msg, int size) {
 *@param resultStr char * store the created name
 *@param maxSize int the max size of resultStr
 */
-int createLogfileName(char * resultStr, int maxSize, int isCancel) {
+int createLogfileName(char * resultStr, int maxSize, int isCancel, const char *prefix) {
   time_t now;
   struct tm * timeInfo;
   time(&now);
@@ -220,22 +272,28 @@ int createLogfileName(char * resultStr, int maxSize, int isCancel) {
   char timeStr[1024] = {0};
   strftime(timeStr, 1023, timeFormat, timeInfo);
   if (isCancel) {
-	snprintf(resultStr, maxSize, "%s_%s.csv", "cancel", timeStr);
+	snprintf(resultStr, maxSize, "%s_%s_%s.csv", "cancel", prefix,  timeStr);
   } else {
-	snprintf(resultStr, maxSize, "%s_%s.csv", "stop", timeStr);
+	snprintf(resultStr, maxSize, "%s_%s_%s.csv", "close", prefix, timeStr);
   }
   return 0;
 }
 
-int initLogFile(char *logFile, int maxSize, int isCancel) {
+int initLogFile(char *logFile, int maxSize, int isCancel, const char *prefix) {
   //initialize logfile
-  createLogfileName(logFile, maxSize, isCancel);
+  createLogfileName(logFile, maxSize, isCancel, prefix);
   FILE * fd = fopen(logFile, "w");
   if (!fd) {
 	return 1;
   }
   char logStr[1024] = {0};
-  sprintf(logStr, "timeDuration, bytesRecvedOfApplication, sniffedPayloadSize, sniffedPacketNum\n");
+  char *cancelStr;
+  if (isCancel) {
+	cancelStr = STOP_MSG;
+  } else {
+	cancelStr = CLOSE_MSG;
+  }
+  sprintf(logStr, "timeDuration, bytesRecvedOfApplication, sniffedSizeWhen%s, sniffPacketNumWhen%s, sniffedSize, sniffedPacketNum\n", cancelStr, cancelStr);
   if (fwrite(logStr, sizeof (char), strlen(logStr), fd) <= 0) {
 	return 1;
   }
@@ -284,7 +342,6 @@ void cbForSniffLog(const char * logMsg) {
 }
 /* thread function for packet sniff*/
 void * sniffThreadFunc( void * sniffPanel) {
-  struct SniffPanel * panel = (struct SniffPanel *)sniffPanel;
   runSniff((struct SniffPanel *)sniffPanel);
   return NULL;
 }

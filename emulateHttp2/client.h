@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-28 20:59:31
-# Last Modified: 2015-12-30 11:13:24
+# Last Modified: 2016-01-04 21:19:40
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,8 +24,8 @@
 #include <pthread.h>
 #include "packetSniff.h"
 
-#define RANDOM_RANGE 20
-#define STOP_MSG "stop"
+#define RANDOM_RANGE 10
+#define STOP_MSG "cancel"
 #define CLOSE_MSG "close"
 #define FILE_NAME_SIZE 1024
 #define IP_STR_LEN 20
@@ -56,7 +56,7 @@ int initialLogFile(int isCancel);
 *@param resultStr char * store the created name
 *@param maxSize int the max size of resultStr
 */
-int createLogfileName(char * resultStr, int maxSize, int isCancel);
+int createLogfileName(char * resultStr, int maxSize, int isCancel, const char *prefix);
 
 int initClientSockInfo(struct ClientSockInfo *sockInfo, char *serverIP, char *serverPort);
 
@@ -80,4 +80,4 @@ int recvWithInRandom(struct ClientSockInfo *sockInfo, int randomSecs);
 
 //append log
 int appendLog(char *logFile, struct ClientSockInfo *sockInfo, int randomSecs); 
-int initLogFile(char *logFile, int maxSize, int isCancel);
+int initLogFile(char *logFile, int maxSize, int isCancel, const char *prefix);
