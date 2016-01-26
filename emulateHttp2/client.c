@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2016-01-25 22:31:54
+# Last Modified: 2016-01-26 10:20:29
 ************************************************/
 #include "client.h"
 #include "util.h"
@@ -137,8 +137,9 @@ int main(int argc, char * argv[]) {
 	//decide whether to close sock immediately after sending out cancel signal
 	if (!isCancel) {
 	  printf("shutdown for close test\n");
-	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
-	  close(sockInfo.clientSockFd);
+	  closeSock(sockInfo.clientSockFd);
+	  printf("sleep for %d seconds in close test\n", sleepTime);
+	  sleep(sleepTime);
 	} else {
 	  printf("continue receive for cancel test\n");
 	  struct timeval timeout;
@@ -147,12 +148,9 @@ int main(int argc, char * argv[]) {
 	  int recvAfterCancel = receiveFromSockUtilTimeout(sockInfo.clientSockFd, &timeout);
 	  printf("recv %d KB after sending cancel signal", recvAfterCancel / 1024);
 	  printf("shutdown connection for cancel test\n");
-	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
-	  close(sockInfo.clientSockFd);
+	  closeSock(sockInfo.clientSockFd);
 	}
 
-	printf("sleep for %d seconds\n", sleepTime);
-	sleep(sleepTime);
 	//record log
 	if (appendLog(logFile, &sockInfo, randomSecs) == 0) {
 	  printf("finish appending new log\n");

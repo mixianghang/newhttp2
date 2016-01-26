@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2016-01-25 13:32:19
-# Last Modified: 2016-01-25 15:56:57
+# Last Modified: 2016-01-26 10:15:58
 ************************************************/
 /**use select to decide whether the sock is ready for reading or not*/
 int canRead(int sockFd);
@@ -33,5 +33,8 @@ int recvFromSock(int sockFd, char * buffer, int maxSize, int isBlock);
 
 /** send to  sock */
 int sendToSock(int sockFd, char * buffer, int length, int isBlock);
+
+/** comppletely close socket*/
+int closeSock(int sockFd);
 
 

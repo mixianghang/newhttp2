@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2016-01-25 13:31:40
-# Last Modified: 2016-01-25 15:26:23
+# Last Modified: 2016-01-26 10:31:49
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -161,4 +161,11 @@ int sendToSock(int sockFd, char * buffer, int length, int isBlock) {
 	return 1;
   }
   return -1;
+}
+
+/** comppletely close socket*/
+int closeSock(int sockFd) {
+  shutdown(sockFd, SHUT_RDWR);
+  //close(sockFd);
+  return 1;
 }
