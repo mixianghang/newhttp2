@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2016-01-26 10:18:18
+# Last Modified: 2016-01-26 11:15:04
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
   socklen_t addrLen = sizeof (struct sockaddr_in);
   while (1) {
 	memset(&clientAddr, 0, sizeof clientAddr);
+	printf("ready to accept new request\n");
 	acceptedSockFd = accept(listenSockFd, (struct sockaddr *)&clientAddr, &addrLen);
 	if (acceptedSockFd >= 0) {
 	  RequestInfo * info = (RequestInfo *) malloc(sizeof(RequestInfo));
@@ -156,6 +157,7 @@ void * processRequest(void * param) {
 
 	//send to socket
     if (sendToSock(sockFd, buffer, tempReadLen, 1) != 1) {
+	  printf("send to sock failed\n");
 	  goto cleanAndQuit;
 	}
 	sentSize += tempReadLen;
