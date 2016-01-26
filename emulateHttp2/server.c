@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2016-01-25 21:44:30
+# Last Modified: 2016-01-25 22:32:29
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,11 +116,13 @@ void * processRequest(void * param) {
   if (recvStatus < 0) {
 	printf("recv request info failed\n");
 	shutdown(sockFd, SHUT_RDWR);
+	close(sockFd);
 	free(requestInfo);
 	return NULL;
   } else if (recvStatus == 0) {
 	printf("client has closed this connection\n");
 	shutdown(sockFd, SHUT_RDWR);
+	close(sockFd);
 	free(requestInfo);
 	return NULL;
   }
@@ -130,6 +132,7 @@ void * processRequest(void * param) {
   if (!checkFileExist(requestFile)) {
 	printf("file doesn't exist: %s\n", requestFile);
 	shutdown(sockFd, SHUT_RDWR);
+	close(sockFd);
 	free(requestInfo);
 	return NULL;
   }
@@ -184,6 +187,7 @@ void * processRequest(void * param) {
 	}
 	cleanAndQuit:
 	shutdown(sockFd, SHUT_RDWR);
+	close(sockFd);
 	if (requestInfo) {
 	  free(requestInfo);
 	}

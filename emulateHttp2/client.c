@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2016-01-25 21:34:51
+# Last Modified: 2016-01-25 22:31:54
 ************************************************/
 #include "client.h"
 #include "util.h"
@@ -138,6 +138,7 @@ int main(int argc, char * argv[]) {
 	if (!isCancel) {
 	  printf("shutdown for close test\n");
 	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+	  close(sockInfo.clientSockFd);
 	} else {
 	  printf("continue receive for cancel test\n");
 	  struct timeval timeout;
@@ -147,6 +148,7 @@ int main(int argc, char * argv[]) {
 	  printf("recv %d KB after sending cancel signal", recvAfterCancel / 1024);
 	  printf("shutdown connection for cancel test\n");
 	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+	  close(sockInfo.clientSockFd);
 	}
 
 	printf("sleep for %d seconds\n", sleepTime);
@@ -156,24 +158,16 @@ int main(int argc, char * argv[]) {
 	  printf("finish appending new log\n");
 	} else {
 	  fprintf(stderr, "failed to append new log\n");
-	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
       i--;
       continue;
 	}
 	if (stopSniff(&sniffPanel) != 0) {
 	  fprintf(stderr, "stop sniff failed\n");
-	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
       i--;
       continue;
 	} else {
 	  printf("finish stopping sniff with packets: %d, payloadSize: %d\n", sniffPanel.packetNum, sniffPanel.payloadSize / 1024);
 	}
-	//if is cancel test, close sock after waiting some time 
-	if (isCancel) {
-	  printf("shutdown connection for cancel test\n");
-	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
-	}
-	close(sockInfo.clientSockFd);
   }
 }
 
