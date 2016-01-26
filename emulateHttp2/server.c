@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2016-01-26 11:15:04
+# Last Modified: 2016-01-26 06:34:34
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
 	  continue;
 	}
   }
+  printf("why quit?\n");
   return 0;
 }
 
@@ -170,6 +171,7 @@ void * processRequest(void * param) {
 	memset(buffer, 0, sizeof buffer);
     int recvLen = recvFromSock(sockFd, buffer, sizeof buffer - 1, 1);
 	if (recvLen <= 0) {// the other side has close the sockfd or some error happens
+	  printf("failed to recv close/cancel signal\n");
 	  goto cleanAndQuit;
 	}
 	printf("sent %d KB data\n", sentSize / 1024);
