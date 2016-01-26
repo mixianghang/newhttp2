@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2016-01-25 13:31:40
-# Last Modified: 2016-01-26 14:29:29
+# Last Modified: 2016-01-26 14:45:12
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -151,7 +151,7 @@ int sendToSock(int sockFd, char * buffer, int length, int isBlock) {
   int temp = 0;
   int sentSum = 0;
   while ( sentSum < length ) {
-	temp = send(sockFd, buffer + sentSum, length - sentSum, MSG_NOSIGNAL);
+	temp = send(sockFd, buffer + sentSum, length - sentSum, 0);
 	if (temp > 0) {
 	  sentSum += temp;
 	}

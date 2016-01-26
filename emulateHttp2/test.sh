@@ -1,18 +1,19 @@
 #!/bin/bash
-if [ $# -lt 7 ]
+if [ $# -lt 8 ]
 then
-  echo "Usage : ip port filename requestNum deviceName filterExpression resultDir "
+  echo "Usage : ip port filename requestNum deviceName filterExpression resultDir sleepTime"
   exit 1
 fi
 date=$( date +"%Y%m%d-%H%M")
 curDir=$(pwd)
-resultDir=$7
 ip=$1
 port=$2
 fileName=$3
 num=$4
 device=$5
 filterExpression=$6
+resultDir=$7
+sleepTime=$8
 
 mkdir -p $curDir/${resultDir}_$date
 resultDir=$curDir/${resultDir}_$date
@@ -31,10 +32,10 @@ do
         echo "bandwidth limitation: $bdlimit, delay: $delay"
         logPrefix=${bdlimit}_${delay}
         $curDir/interaction.exp "sudo ./setBdLimit.sh $bdlimit $port $delay"
-        echo "start to execute: ./client $ip $port $fileName $num 0 $device '$filterExpression' $logPrefix"
-        $curDir/client $ip $port $fileName $num 0 $device "$filterExpression" $logPrefix
-        echo "start to execute: ./client $ip $port $fileName $num 1 $device '$filterExpression' $logPrefix"
-        $curDir/client $ip $port $fileName $num 1 $device "$filterExpression" $logPrefix
+        echo "start to execute: ./client $ip $port $fileName $num 0 $device '$filterExpression' $logPrefix $sleepTime"
+        $curDir/client $ip $port $fileName $num 0 $device "$filterExpression" $logPrefix $sleepTime
+        echo "start to execute: ./client $ip $port $fileName $num 1 $device '$filterExpression' $logPrefix $sleepTime"
+        $curDir/client $ip $port $fileName $num 1 $device "$filterExpression" $logPrefix $sleepTime
     done
 done
 

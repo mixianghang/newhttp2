@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2016-01-26 06:34:34
+# Last Modified: 2016-01-26 14:44:57
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,11 +28,22 @@
 #include "server.h"
 #include "util.h"
 
+void signalHandle(int sigNum) {
+  if (sigNum == SIGPIPE) {
+	printf("I got you, sigpipe when the other side closes the connection\n");
+  }
+}
+
 int main(int argc, char *argv[]) {
   //check args num
   if (argc < 2) {
 	printf("Usage : server port\n");
 	return 1;
+  }
+  if (signal(SIGPIPE, signalHandle) == SIG_ERR) {
+	printf("register signal handler for sigpipe failed\n");
+  } else {
+	printf("register signal handler for sigpipe successfully\n");
   }
 
   //create socket and bind to port
