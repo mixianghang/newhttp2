@@ -6,9 +6,8 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2015-12-30 14:47:26
+# Last Modified: 2016-01-25 15:27:36
 ************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -23,17 +22,11 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <pthread.h>
 #include <time.h>
 
-#define MAX_CONNECTION_QUEUE 10
-
-//create a logfile name 
-int createLogfileName(char * resultStr, int maxSize);
-
-int checkFileExist(char * filePath);
-
-// get file size
-int getFileSize(char * filePath);
+#include "server.h"
+#include "util.h"
 
 int main(int argc, char *argv[]) {
   //check args num
@@ -42,37 +35,12 @@ int main(int argc, char *argv[]) {
 	return 1;
   }
 
-  // initial logfile
-  char logfileName[1024] = {0};
-  createLogfileName(logfileName, 1023);
-  FILE * logfd = fopen(logfileName, "w");
-  if (!logfd) {
-	printf("open logfile failed: %s\n", logfileName);
-	return 1;
-  }
-  char logStr[1024] = {0};
-  sprintf(logStr, "bytesSentWhenStop, bytesInTCPSendBuffer\n");
-  if (fwrite(logStr, sizeof(char), strlen(logStr), logfd) != strlen(logStr)) {
-	printf("write log failed\n");
-	return 1;
-  }
-  fclose(logfd);
-
   //create socket and bind to port
   int listenSockFd, listenPort;
   int acceptedSockFd;
-
-  //sockaddr_in struct
-  //sa_family_t    sin_family
-  //in_port_t      sin_port
-  //struct in_addr sin_addr
-  //unsigned char  sin_zero[8]
   struct sockaddr_in serverAddr_in;
   int len_sockaddr_in = sizeof(struct sockaddr_in);
-  if (argc < 2) {
-	printf("usage: ./server port\n");
-	return 1;
-  }
+
   listenSockFd = socket(AF_INET,SOCK_STREAM,0);//create socket 
   listenPort = atoi(argv[1]);
   printf("the listen port is %d \n", listenPort);
@@ -93,142 +61,28 @@ int main(int argc, char *argv[]) {
   }
 
   listen(listenSockFd,MAX_CONNECTION_QUEUE);
-  int isCancel = 0;
-  char clientIp[20];
-  int clientPort;
   struct sockaddr_in clientAddr;
   socklen_t addrLen = sizeof (struct sockaddr_in);
   while (1) {
-	if (!isCancel) {
-	  acceptedSockFd = accept(listenSockFd, (struct sockaddr *)&clientAddr, &addrLen);
-	  if (acceptedSockFd >= 0) {
-		clientPort = ntohs(clientAddr.sin_port);
-		memset(clientIp, 0, sizeof clientIp);
-		inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIp, 19);
-		printf("start to serve request from client %s:%d\n", clientIp, clientPort);
-		struct timeval tv;
-		tv.tv_sec = 30;  /* 30 Secs Timeout */
-		setsockopt(acceptedSockFd, SOL_SOCKET, SO_RCVTIMEO,(struct timeval *)&tv,sizeof(struct timeval));
-	  } else {
-		printf("failed to accept new request\n");
-		close(listenSockFd);
-		continue;
-	  }
-	}
-	fd_set originalFds;
-	fd_set readFds;
-	fd_set writeFds;
-	int maxFd = acceptedSockFd + 1;
-	FD_ZERO(&originalFds);
-	FD_SET(acceptedSockFd, &originalFds);
-	struct timeval zeroTime;
-	zeroTime.tv_sec = 0;
-	zeroTime.tv_usec = 0;
-	readFds = originalFds;
-	select(maxFd, &readFds, NULL, NULL, NULL);
-	if (!FD_ISSET(acceptedSockFd, &readFds)) {
-	  printf("accept request timeout\n");
-	  close(acceptedSockFd);
+	memset(&clientAddr, 0, sizeof clientAddr);
+	acceptedSockFd = accept(listenSockFd, (struct sockaddr *)&clientAddr, &addrLen);
+	if (acceptedSockFd >= 0) {
+	  RequestInfo * info = (RequestInfo *) malloc(sizeof(RequestInfo));
+	  info->sockFd = acceptedSockFd;
+	  info->clientPort = ntohs(clientAddr.sin_port);
+	  memset(info->clientIP, 0, sizeof info->clientIP);
+	  inet_ntop(AF_INET, &(clientAddr.sin_addr), info->clientIP, 19);
+	  pthread_t thread;
+	  pthread_create(&thread, NULL, processRequest, (void *)info);
+	  //struct timeval tv;
+	  //tv.tv_sec = 30;  /* 30 Secs Timeout */
+	  //setsockopt(acceptedSockFd, SOL_SOCKET, SO_RCVTIMEO,(struct timeval *)&tv,sizeof(struct timeval));
+	} else {
+	  printf("failed to accept new request\n");
 	  continue;
-	}
-	char requestFile[1024] = {0};
-	int recvStatus = recv(acceptedSockFd, requestFile, sizeof requestFile - 1, 0); 
-	if (recvStatus < 0) {
-	  isCancel = 0;
-	  printf("recv request info failed\n");
-	  close(acceptedSockFd);
-	  continue;
-	} else if (recvStatus == 0) {
-	  isCancel = 0;
-	  printf("client has closed this connection\n");
-	  close(acceptedSockFd);
-	  continue;
-	}
-	printf("requestInfo: %s\n", requestFile);
-
-	// check File existence and open file
-	if (!checkFileExist(requestFile)) {
-	  printf("file doesn't exist: %s\n", requestFile);
-	  close(acceptedSockFd);
-	  continue;
-	}
-	FILE * fd = fopen(requestFile, "r");
-	if (!fd) {
-	  printf("open request file failed\n");
-	  close(acceptedSockFd);
-	  continue;
-	}
-
-	// send requested file
-	char buffer[5012];
-	unsigned int requestFileSize = getFileSize(requestFile);
-	unsigned int readSize = 0;
-	unsigned sentSize = 0;
-	while (1) {
-	  unsigned int tempReadLen = 0;
-	  memset(buffer, 0, sizeof buffer);
-	  if ((tempReadLen = fread(buffer, sizeof(char), sizeof buffer -1, fd)) <= 0) {
-		printf("read file failed %d\n", tempReadLen);
-		close(acceptedSockFd);
-		break;
-	  }
-	  readSize += tempReadLen;
-
-	  //send to socket
-	  writeFds = originalFds;
-	  select(maxFd, NULL, &writeFds, NULL, NULL);
-	  if (FD_ISSET(acceptedSockFd, &writeFds)) {
-		int tempSentLen = 0;
-		int sumSentLen  = 0;
-		while (sumSentLen < tempReadLen) {
-		  tempSentLen = send(acceptedSockFd, buffer + sumSentLen, tempReadLen - sumSentLen, 0);
-		  if (tempSentLen < 0) {
-			printf("send error\n");
-			close(acceptedSockFd);
-			return 1;
-		  }
-		  sumSentLen += tempSentLen;
-		}
-		sentSize += sumSentLen;
-		//printf("send %d bytes\n", sumSentLen);
-	  }
-
-	  // check stop message without blocking
-	  readFds = originalFds;
-	  select(maxFd, &readFds, NULL, NULL, &zeroTime);
-	  if (FD_ISSET(acceptedSockFd, &readFds)) {
-		memset(buffer, 0, sizeof buffer);
-		if (recv(acceptedSockFd, buffer, sizeof buffer -1, 0) > 0) {
-		  printf("recved stop msg: %s\n", buffer);
-		  FILE * logfd = fopen(logfileName, "a");
-		  if (!logfd) {
-			printf("open log file failed\n");
-		  } else {
-			unsigned int bytesInTcpbuffer = 0;
-			memset(logStr, 0, sizeof logStr);
-			sprintf(logStr, "%d,%d\n", sentSize, bytesInTcpbuffer);
-			if (fwrite(logStr, sizeof(char), strlen(logStr), logfd) <= 0) {
-			  printf("append log file failed\n");
-			}
-		  }
-		  if (strcmp(buffer, "stop") == 0) {
-			isCancel = 1;
-		  } else if (strcmp(buffer, "close") == 0) {
-			close(acceptedSockFd);
-			isCancel = 0;
-		  }
-		  if (fd) {
-			fclose(fd);
-		  }
-		  if (logfd) {
-			fclose(logfd);
-		  }
-		  printf("send size is %u\n", sentSize);
-		  break;
-		}
-	  }
 	}
   }
+  return 0;
 }
 
 /**
@@ -248,17 +102,89 @@ int createLogfileName(char * resultStr, int maxSize) {
   return 0;
 }
 
+/** used by thread to process new request*/
+void * processRequest(void * param) {
+  RequestInfo *requestInfo = (RequestInfo *) param;
+  int  sockFd = requestInfo->sockFd;
+  char *clientIP  = requestInfo->clientIP;
+  int  clientPort = requestInfo->clientPort;
 
-int checkFileExist(char * filePath) {
-	struct stat statStruct;
-	return ( stat(filePath,&statStruct) ) == 0;
-}
+  printf("start to serve request from %s:%d\n", clientIP, clientPort);
+  //receive request file information
+  char requestFile[1024] = {0};
+  int recvStatus = recvFromSock(sockFd, requestFile, sizeof requestFile - 1, 1);
+  if (recvStatus < 0) {
+	printf("recv request info failed\n");
+	shutdown(sockFd, SHUT_RDWR);
+	free(requestInfo);
+	return NULL;
+  } else if (recvStatus == 0) {
+	printf("client has closed this connection\n");
+	shutdown(sockFd, SHUT_RDWR);
+	free(requestInfo);
+	return NULL;
+  }
+  printf("requestInfo: %s\n", requestFile);
 
-int getFileSize(char * filePath) {
-	struct stat statStruct;
-	if (stat(filePath,&statStruct) == 0) { 
-		return statStruct.st_size;
-	} else {
-		return -1;
+  // check File existence and open file
+  if (!checkFileExist(requestFile)) {
+	printf("file doesn't exist: %s\n", requestFile);
+	shutdown(sockFd, SHUT_RDWR);
+	free(requestInfo);
+	return NULL;
+  }
+  FILE * fd = fopen(requestFile, "r");
+  if (!fd) {
+	printf("open request file failed\n");
+	goto cleanAndQuit;
+  }
+
+  // send requested file
+  char buffer[1024];
+  unsigned int requestFileSize = getFileSize(requestFile);
+  unsigned int readSize = 0;
+  unsigned int sentSize = 0;
+  printf("start to send to client\n");
+  while (readSize < requestFileSize) {
+	unsigned int tempReadLen = 0;
+	memset(buffer, 0, sizeof buffer);
+	if ((tempReadLen = fread(buffer, sizeof(char), sizeof buffer -1, fd)) < 0) {
+	  printf("read file failed %d\n", tempReadLen);
+	  goto cleanAndQuit;
 	}
+	readSize += tempReadLen;
+
+	//send to socket
+    if (sendToSock(sockFd, buffer, tempReadLen, 1) != 1) {
+	  goto cleanAndQuit;
+	}
+	sentSize += tempReadLen;
+	//printf("send to client with len %d, sumLen, %d\n", sumSentLen, sentSize);
+
+	if (canRead(sockFd) != 1) {
+	  continue;
+	}
+	printf("start to receive cancel/close msg\n");
+	memset(buffer, 0, sizeof buffer);
+    int recvLen = recvFromSock(sockFd, buffer, sizeof buffer - 1, 1);
+	if (recvLen <= 0) {// the other side has close the sockfd or some error happens
+	  goto cleanAndQuit;
+	}
+	printf("receive cancel/close msg: %s\n", buffer);
+	if (strcmp(buffer, CANCEL_MSG) == 0) {
+	  printf("wait for close after receiving cancel msg\n");
+	  waitForClose(sockFd);
+	} else {
+	  printf("close after receiving close msg\n");
+	}
+	cleanAndQuit:
+	shutdown(sockFd, SHUT_RDWR);
+	if (requestInfo) {
+	  free(requestInfo);
+	}
+	if (fd) {
+	  fclose(fd);
+	}
+	return NULL;
+  }
 }

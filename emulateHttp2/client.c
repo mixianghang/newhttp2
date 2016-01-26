@@ -6,9 +6,10 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2016-01-24 10:48:01
+# Last Modified: 2016-01-25 16:12:09
 ************************************************/
 #include "client.h"
+#include "util.c"
 
 int main(int argc, char * argv[]) {
   //check comand line paremeters
@@ -120,8 +121,6 @@ int main(int argc, char * argv[]) {
       continue;
 	}
 
-	int packetNum = sniffPanel.packetNum;
-	int payloadSize = sniffPanel.payloadSize;
 
 	//send cancel or close signal
 	const char *signal = isCancel? STOP_MSG : CLOSE_MSG;
@@ -138,7 +137,17 @@ int main(int argc, char * argv[]) {
 	if (!isCancel) {
 	  printf("shutdown for close test\n");
 	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
+	} else {
+	  printf("continue receive for cancel test\n");
+	  struct timeval timeout;
+	  timeout.tv_sec = 5;
+	  timeout.tv_usec = 0;
+	  int recvAfterCancel = receiveFromSockUtilTimeout(sockInfo.clientSockFd, &timeout);
+	  printf("recv %d KB after sending cancel signal", recvAfterCancel / 1024);
+	  printf("shutdown connection for cancel test\n");
+	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
 	}
+
 	//record log
 	if (appendLog(logFile, &sockInfo, randomSecs) == 0) {
 	  printf("finish appending new log\n");
@@ -148,36 +157,13 @@ int main(int argc, char * argv[]) {
       i--;
       continue;
 	}
-
-	FILE * logFd =  fopen(logFile, "a");
-	if (logFd == NULL) {
-	  fprintf(stderr, "failed to append new log\n");
-	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
-      i--;
-      continue;
-	} else {
-	  char logStr[1024] = {0};
-	  snprintf(logStr, sizeof logStr - 1, "%d,%d", packetNum, payloadSize);
-	  if (fwrite(logStr, sizeof(char), strlen(logStr), logFd) < strlen(logStr)) {
-		fprintf(stderr, "failed to append new log\n");
-		shutdown(sockInfo.clientSockFd, SHUT_RDWR);
-		i--;
-		continue;
-	  }
-	  fclose(logFd);
-	}
-
-	//sleep and wait for finishing packets sniff
-	int sleepTime = 15;
-	printf("start to sleep for %d seconds\n", sleepTime);
-	sleep(sleepTime);
 	if (stopSniff(&sniffPanel) != 0) {
 	  fprintf(stderr, "stop sniff failed\n");
 	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
       i--;
       continue;
 	} else {
-	  printf("finish stopping sniff with packets: %d, payloadSize: %d\n", sniffPanel.packetNum, sniffPanel.payloadSize);
+	  printf("finish stopping sniff with packets: %d, payloadSize: %d\n", sniffPanel.packetNum, sniffPanel.payloadSize / 1024);
 	}
 	//if is cancel test, close sock after waiting some time 
 	if (isCancel) {
@@ -229,7 +215,7 @@ int appendLog(char *logFile, struct ClientSockInfo *sockInfo, int random) {
 	fprintf(stderr, "open file failed: %s in %s\n", logFile, __func__);
 	return 1;
   }
-  sprintf(logStr, "%d,%d,", random, sockInfo->recvedBytes);
+  sprintf(logStr, "%d,%d,", random, sockInfo->recvedBytes / 1024);
   if (fwrite(logStr, sizeof(char), strlen(logStr), fp) < strlen(logStr)) {
 	fprintf(stderr, "append file failed: %s in %s\n", logFile, __func__);
 	return 1;
@@ -287,13 +273,7 @@ int initLogFile(char *logFile, int maxSize, int isCancel, const char *prefix) {
 	return 1;
   }
   char logStr[1024] = {0};
-  char *cancelStr;
-  if (isCancel) {
-	cancelStr = STOP_MSG;
-  } else {
-	cancelStr = CLOSE_MSG;
-  }
-  sprintf(logStr, "timeDuration, bytesRecvedOfApplication, sniffedSizeWhen%s, sniffPacketNumWhen%s, sniffedSize, sniffedPacketNum\n", cancelStr, cancelStr);
+  sprintf(logStr, "timeDuration, bytesRecvedOfApplication, sniffedPacketNum, sniffedSize\n");
   if (fwrite(logStr, sizeof (char), strlen(logStr), fd) <= 0) {
 	return 1;
   }
@@ -323,7 +303,7 @@ void cbAfterSniff(const struct SniffPanel *panel, void * userArgs) {
 	fprintf(stderr, "open file failed: %s in %s\n", logFilePath, __func__);
 	return;
   }
-  sprintf(logStr, "%d,%d\n", panel->packetNum, panel->payloadSize);
+  sprintf(logStr, "%d,%d\n", panel->packetNum, panel->payloadSize / 1024);
   if (fwrite(logStr, sizeof(char), strlen(logStr), fp) < strlen(logStr)) {
 	fprintf(stderr, "append log failed: %s in %s\n", logFilePath, __func__);
 	return;
@@ -376,4 +356,28 @@ int createNewConn(struct ClientSockInfo * sockInfo) {
   sockInfo->maxFd      = maxFd;
   sockInfo->originalFds = originalFds;
   return 0;
+}
+
+/** receive until timeout happends **/
+int receiveFromSockUtilTimeout(int sockFd, struct timeval *timeout) {
+  //receive until no data from the other side for 10 seconds
+  int sec = timeout->tv_sec;
+  int usec = timeout->tv_usec;
+  int recvLen = 0;
+  char buffer[1024] = {0};
+  while (1) {
+	if (waitForRead(sockFd, timeout) != 1) {
+	  break;
+	}
+	memset(buffer, 0, sizeof buffer);
+	int recvLen = readFromSock(sockFd, buffer, sizeof buffer - 1, 1);
+	if (recvLen > 0) {
+	  recvAfterSignal += recvLen;
+	} else {
+	  break;
+	}
+	timeout->tv_sec = sec;
+	timeout->tv_usec = usec;
+  }
+  return recvLen;
 }

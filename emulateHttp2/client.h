@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-28 20:59:31
-# Last Modified: 2016-01-04 21:19:40
+# Last Modified: 2016-01-25 15:57:29
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -81,3 +81,6 @@ int recvWithInRandom(struct ClientSockInfo *sockInfo, int randomSecs);
 //append log
 int appendLog(char *logFile, struct ClientSockInfo *sockInfo, int randomSecs); 
 int initLogFile(char *logFile, int maxSize, int isCancel, const char *prefix);
+
+/** receive until timeout happends **/
+int receiveFromSockUtilTimeout(int sockFd, struct timeval *timeout);
