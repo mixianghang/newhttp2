@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-26 11:04:10
-# Last Modified: 2016-01-25 15:27:36
+# Last Modified: 2016-01-25 21:44:30
 ************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -170,10 +170,15 @@ void * processRequest(void * param) {
 	if (recvLen <= 0) {// the other side has close the sockfd or some error happens
 	  goto cleanAndQuit;
 	}
+	printf("sent %d KB data\n", sentSize / 1024);
 	printf("receive cancel/close msg: %s\n", buffer);
 	if (strcmp(buffer, CANCEL_MSG) == 0) {
 	  printf("wait for close after receiving cancel msg\n");
-	  waitForClose(sockFd);
+	  if (waitForClose(sockFd) == 1) {
+		printf("client close connection, quit right now\n");
+	  } else {
+		printf("waitForClose Failed, quit right now\n");
+	  }
 	} else {
 	  printf("close after receiving close msg\n");
 	}

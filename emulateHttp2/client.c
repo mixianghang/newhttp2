@@ -6,20 +6,21 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-11-24 19:08:50
-# Last Modified: 2016-01-25 16:12:09
+# Last Modified: 2016-01-25 21:34:51
 ************************************************/
 #include "client.h"
-#include "util.c"
+#include "util.h"
 
 int main(int argc, char * argv[]) {
   //check comand line paremeters
-  if (argc < 9) {
-	  printf("usage: client ip port requestfilename requestNum cancelOrStop(1 is cancel, 0 is stop) netinterface filterExpression serverbandstatus\n");
+  if (argc < 10) {
+	  printf("usage: client ip port requestfilename requestNum cancelOrStop(1 is cancel, 0 is stop) netinterface filterExpression serverbandstatus sleepTime\n");
 	  return 1;
   }
   // check cancel parameter
   int isCancel = 0;
   char *prefix = argv[8];
+  int sleepTime = atoi(argv[9]);
   if (strcmp(argv[5], "1") == 0) {
 	isCancel = 1;
   }
@@ -113,7 +114,7 @@ int main(int argc, char * argv[]) {
 	sockInfo.recvedBytes = 0;
 	printf("start to recv within %d seconds\n", randomSecs);
 	if (recvWithInRandom(&sockInfo, randomSecs) == 0) {
-	  printf("recv %d bytes in %d seconds\n", sockInfo.recvedBytes, randomSecs);
+	  printf("recv %d KB in %d seconds\n", sockInfo.recvedBytes / 1024, randomSecs);
 	} else {
 	  fprintf(stderr, "recv failed in round %d with random %d\n", i, randomSecs);
 	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
@@ -148,6 +149,8 @@ int main(int argc, char * argv[]) {
 	  shutdown(sockInfo.clientSockFd, SHUT_RDWR);
 	}
 
+	printf("sleep for %d seconds\n", sleepTime);
+	sleep(sleepTime);
 	//record log
 	if (appendLog(logFile, &sockInfo, randomSecs) == 0) {
 	  printf("finish appending new log\n");
@@ -370,9 +373,9 @@ int receiveFromSockUtilTimeout(int sockFd, struct timeval *timeout) {
 	  break;
 	}
 	memset(buffer, 0, sizeof buffer);
-	int recvLen = readFromSock(sockFd, buffer, sizeof buffer - 1, 1);
-	if (recvLen > 0) {
-	  recvAfterSignal += recvLen;
+	int tempLen = recvFromSock(sockFd, buffer, sizeof buffer - 1, 1);
+	if (tempLen > 0) {
+	  recvLen += tempLen;
 	} else {
 	  break;
 	}
