@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-27 16:23:56
-# Last Modified: 2016-02-18 14:54:57
+# Last Modified: 2016-02-18 18:00:39
 ************************************************/
 #include "packetSniff.h"
 
@@ -20,12 +20,26 @@ void signalHandle(int sigNum) {
 	case SIGINT: {
 	  printf("nihao, sigsint\n");
 	  if (handle) {
+		printf("interrupt\n");
 		pcap_breakloop(handle);
 	  }
 	  break;
 	}
 	case SIGCONT: {
 	  printf("welcome sigcont\n");
+	  FILE *logFd = fopen(logFilePath, "a");
+	  if (!logFd) {
+		printf("logfile %s doesn't exist\n", logFilePath);
+		exit(1);
+	  }
+	  char buffer[1024] = {0};
+	  snprintf(buffer, sizeof buffer - 1, "%d\t%d\t", panel.payloadSize / 1024, panel.packetNum);
+	  printf("%s\n", buffer);
+	  if (fwrite(buffer, sizeof(char), strlen(buffer), logFd) != strlen(buffer)) {
+		printf("write to file %s failed\n", logFilePath);
+		exit(1);
+	  }
+	  fclose(logFd);
 	  break;
 	}
 	default: {
@@ -40,6 +54,7 @@ int main(int argc, char *argv[]){
 	return 1;
   }
   signal(SIGINT, signalHandle);
+  signal(SIGCONT, signalHandle);
   char *dev = argv[1];
   char *payloadFilePath = argv[3];
   logFilePath = argv[4];
@@ -103,14 +118,14 @@ int main(int argc, char *argv[]){
 	return 1;
   }
   char buffer[1024] = {0};
-  snprintf(buffer, sizeof buffer - 1, "%d\t%d\n", panel.payloadSize, panel.packetNum);
+  snprintf(buffer, sizeof buffer - 1, "%d\t%d\n", panel.payloadSize / 1024, panel.packetNum);
   if (fwrite(buffer, sizeof(char), strlen(buffer), logFd) != strlen(buffer)) {
 	printf("write to file %s failed\n", logFilePath);
 	return 1;
   }
   fclose(logFd);
-  printf("response code of loop is %d", response_loop);
-  printf("finish with len %d and packet num %d\n", panel.payloadSize, panel.packetNum);
+  printf("response code of loop is %d\n", response_loop);
+  printf("finish with len %d and packet num %d\n", panel.payloadSize / 1024, panel.packetNum);
   return 0;
 }
 
@@ -154,7 +169,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   int payloadLen = header->len - SIZE_ETHERNET - size_tcp - size_ip;
   memset(logMsg, 0, sizeof logMsg);
   snprintf(logMsg, sizeof logMsg - 1, "source: %s:%d, dst: %s:%d\n", srcIpStr, srcPort, dstIpStr, dstPort);
-  printf("%s", logMsg);
+  //printf("%s", logMsg);
   memset(logMsg, 0, sizeof logMsg);
   snprintf(logMsg, sizeof logMsg - 1, "packetNum: %d, len: %d, ethernet header: %d, ip header: %d, tcp header: %d, payload: %d\n", panel->packetNum, header->len, SIZE_ETHERNET, size_ip, size_tcp, payloadLen);
   printf("%s", logMsg);
@@ -166,7 +181,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   }
   memset(logMsg, 0, sizeof logMsg);
   snprintf(logMsg, sizeof logMsg - 1, "sum size is %d, write to file: %d\n", panel->payloadSize, writeToFileLen); 
-  printf("%s", logMsg);
+  //printf("%s", logMsg);
   return;
 }
 

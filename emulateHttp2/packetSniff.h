@@ -6,7 +6,7 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-29 08:43:16
-# Last Modified: 2015-12-29 15:07:03
+# Last Modified: 2016-02-18 17:11:31
 ************************************************/
 #include <pcap/pcap.h>
 #include <stdio.h>
@@ -15,6 +15,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 typedef struct SniffPanel {
   char * device;
