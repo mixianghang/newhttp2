@@ -6,28 +6,43 @@
 *@email: mixianghang@outlook.com
 *@description: ---
 *Create: 2015-12-27 16:23:56
-# Last Modified: 2015-12-30 12:19:38
+# Last Modified: 2016-02-18 14:54:57
 ************************************************/
 #include "packetSniff.h"
 
 pcap_t *handle;
+char *logFilePath = NULL;
 struct SniffPanel panel;
 void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet);
 
-void intSignalHandle(int sigNum) {
-  if (handle) {
-	pcap_breakloop(handle);
+void signalHandle(int sigNum) {
+  switch(sigNum) {
+	case SIGINT: {
+	  printf("nihao, sigsint\n");
+	  if (handle) {
+		pcap_breakloop(handle);
+	  }
+	  break;
+	}
+	case SIGCONT: {
+	  printf("welcome sigcont\n");
+	  break;
+	}
+	default: {
+	  break;
+	}
   }
 }
 
 int main(int argc, char *argv[]){
-  if (argc < 4) {
-	fprintf(stderr, "Usage: ./packetSniff interface filter_expression payloadFile\n");
+  if (argc < 5) {
+	fprintf(stderr, "Usage: ./packetSniff interface filter_expression payloadFile logFilePath\n");
 	return 1;
   }
-  signal(SIGINT, intSignalHandle);
+  signal(SIGINT, signalHandle);
   char *dev = argv[1];
   char *payloadFilePath = argv[3];
+  logFilePath = argv[4];
   char errbuf[PCAP_ERRBUF_SIZE];
   struct bpf_program fp;		/* The compiled filter */
   char *filter_exp = argv[2];	/* The filter expression */
@@ -81,6 +96,19 @@ int main(int argc, char *argv[]){
   /* pcap close the handle*/
   pcap_close(handle);
   fclose(payloadFile);
+
+  FILE *logFd = fopen(logFilePath, "a");
+  if (!logFd) {
+	printf("logfile %s doesn't exist\n", logFilePath);
+	return 1;
+  }
+  char buffer[1024] = {0};
+  snprintf(buffer, sizeof buffer - 1, "%d\t%d\n", panel.payloadSize, panel.packetNum);
+  if (fwrite(buffer, sizeof(char), strlen(buffer), logFd) != strlen(buffer)) {
+	printf("write to file %s failed\n", logFilePath);
+	return 1;
+  }
+  fclose(logFd);
   printf("response code of loop is %d", response_loop);
   printf("finish with len %d and packet num %d\n", panel.payloadSize, panel.packetNum);
   return 0;
