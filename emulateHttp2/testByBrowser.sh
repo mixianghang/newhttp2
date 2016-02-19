@@ -38,6 +38,7 @@ killBrowser() {
 	return 
   fi
   xdotool windowkill $wndId
+  sleep 2
 }
 requestAndSniff() {
 	if [ $# -lt 2 ];then
@@ -68,7 +69,8 @@ resultDir=$curDir/testWithBrowser_$(date +"%Y%m%d_%H%M%S")
 mkdir -p $resultDir
 delays=("50ms" "100ms" "250ms" "500ms")
 bdlimits=("100mbit" "50mbit" "10mbit" "5mbit")
-bufferSize=(1048576 2097152 4194304 8388608 16777216)
+#bufferSize=(1048576 2097152 4194304 8388608 16777216)
+bufferSize=(4194304 8388608)
 
 defaultSize=524288 
 for defaultSize in ${bufferSize[@]}:
