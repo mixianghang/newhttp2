@@ -1,0 +1,48 @@
+Host labserver
+  IdentityFile ~/.ssh/labserver
+  hostname 156.56.83.24
+  user xianghang
+Host github
+  IdentityFile ~/.ssh/github_rsa
+  user mixianghang
+  hostname github.com
+Host seclab
+  IdentityFile ~/onedrive/Files/seclab.key 
+  user seclab
+  hostname seclab.soic.indiana.edu
+Host labserver2
+  IdentityFile ~/.ssh/common-use
+  user xmi
+  hostname 129.79.242.28
+Host lhlinux1
+  IdentityFile ~/.ssh/common-use
+  user xmi
+  hostname 129.79.242.101
+Host lhlinux2
+  IdentityFile ~/.ssh/common-use
+  user xmi
+  hostname 129.79.242.102
+Host lhlinux3
+  IdentityFile ~/.ssh/common-use
+  user xmi
+  hostname 129.79.242.103
+Host lhlinux4
+  IdentityFile ~/.ssh/common-use
+  user xmi
+  hostname 129.79.242.104
+Host lhlinux5
+  IdentityFile ~/.ssh/common-use
+  user xmi
+  hostname 129.79.242.105
+Host lhlinux6
+  IdentityFile ~/.ssh/common-use
+  user xmi
+  hostname 129.79.242.106
+Host lhlinux7
+  IdentityFile ~/.ssh/common-use
+  user xmi
+  hostname 129.79.242.107
+Host lhlinux8
+  IdentityFile ~/.ssh/common-use
+  user xmi
+  hostname 129.79.242.108

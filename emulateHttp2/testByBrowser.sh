@@ -6,7 +6,7 @@ cancelDownload(){
 
   xdotool windowsize --sync $wndId 500 500
 
-  xdotool windowmove --sync $wndId 250 250
+  xdotool windowmove --sync $wndId 500 500
   xdotool mousemove --window $wndId --sync 200 480
   xdotool click  1
   sleep 2
@@ -62,19 +62,22 @@ portH1=6004
 urlH1="https://http1_test:6004"
 urlH2="https://http2_test:6003"
 fileName="250mb.tar.gz"
-num=2
+num=10
 device="eth0"
 filterExpression="src host $ip"
 resultDir=$curDir/testWithBrowser_$(date +"%Y%m%d_%H%M%S")
 mkdir -p $resultDir
-delays=("50ms" "100ms" "250ms" "500ms")
-bdlimits=("100mbit" "50mbit" "10mbit" "5mbit")
+#delays=("50ms" "100ms" "250ms" "500ms")
+delays=("100ms" "500ms")
+#bdlimits=("100mbit" "50mbit" "10mbit" "5mbit")
+bdlimits=("100mbit" "10mbit")
 #bufferSize=(1048576 2097152 4194304 8388608 16777216)
-bufferSize=(4194304 8388608)
+bufferSize=(8388608)
 
 defaultSize=524288 
-for defaultSize in ${bufferSize[@]}:
+for defaultSize in ${bufferSize[@]}
 do
+  echo $defaultSize
   minSize=$((defaultSize / 2))
   maxSize=$((defaultSize * 2))
   echo "change tcp buffer to $minSize, $defaultSize, $maxSize"
